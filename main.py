@@ -1,48 +1,17 @@
 # This is a sample Python script.
+import sys
+from datetime import datetime
 from typing import Tuple, List
 
+import cv2
 import numpy as np
 import pandas as pd
-import sys
-import cv2
+from scipy import signal
+
+from CNN import CNN
+
 
 # TODO: BEFORE STARTING CONVOLUTION: sample[i] = np.pad(channel, (1, 1), 'constant')
-
-
-class ConvolutionLayer(object):
-    def __init__(self,shape, index: int,with_bias):
-        self.index = index
-        self.bias = with_bias
-        self.shape = shape
-        if with_bias:
-            self.size += 1
-        self.clear_feeded_values()
-
-    def feed(self, values: np.array):
-        self.feeded_values += values
-        # make sure that the bias still shut -1
-        if self.bias:
-            self.feeded_values[-1] = -1
-
-    def clear_feeded_values(self):
-        self.feeded_values = np.zeros(self.shape)
-        # update the bias neuron to -1
-        if self.bias:
-            self.feeded_values[-1] = -1
-
-
-    def convu(self,data, kernels):
-        values = np.zeros(self.shape)
-        for i, feature_map in enumerate(data):
-            for j, weight in enumerate(kernels[i]):
-                values[j] += perform_convolution(feature_map, weight)
-
-        return values
-
-
-    def __repr__(self):
-        return self.feeded_values.__repr__()
-
 
 
 def perform_convolution(feature, kernel):
@@ -56,10 +25,6 @@ def perform_convolution(feature, kernel):
             result[i][j] = np.sum(feature[i:i + kernel_n, j:j + kernel_n] * kernel)
             # TODO: BIAS?
     return result
-
-
-
-
 
 
 def csv_to_data(path, count=-1) -> Tuple[np.array, np.array]:
@@ -88,6 +53,7 @@ def result_classifications_to_np_layers(results_classifications: List[int]) -> n
 
     return results
 
+
 def save_image(data, path):
     data = data.transpose(1, 2, 0) * 255
     data = data.astype(np.float32)
@@ -95,18 +61,30 @@ def save_image(data, path):
     cv2.imwrite(path, image_cv)
 
 
-
-
 def suffle(train_data, train_correct, validate_data, validate_correct):
-    data = np.concatenate((train_data,validate_data))
-    correct = np.concatenate((train_correct,validate_correct))
+    data = np.concatenate((train_data, validate_data))
+    correct = np.concatenate((train_correct, validate_correct))
     rand_state = np.random.get_state()
     np.random.shuffle(data)
     np.random.set_state(rand_state)
     np.random.shuffle(correct)
-    train_data, validate_data = np.split(data,[8000])
-    train_correct, validate_correct = np.split(correct,[8000])
-    return train_data,train_correct,validate_data,validate_correct
+    train_data, validate_data = np.split(data, [8000])
+    train_correct, validate_correct = np.split(correct, [8000])
+    return train_data, train_correct, validate_data, validate_correct
+
+
+def processImage(image):
+    image = cv2.imread(image)
+    image = cv2.cvtColor(src=image, code=cv2.COLOR_BGR2GRAY)
+    return image
+
+
+def conv2d(a, f):
+    s = f.shape + tuple(np.subtract(a.shape, f.shape) + 1)
+    strd = np.lib.stride_tricks.as_strided
+    subM = strd(a, shape=s, strides=a.strides * 2)
+    return np.einsum('ij,ijkl->kl', f, subM)
+
 
 def main():
     if len(sys.argv) < 3:
@@ -115,26 +93,27 @@ def main():
     train_csv = sys.argv[1]
     validate_csv = sys.argv[2]
     test_csv = sys.argv[3] if len(sys.argv) >= 4 else None
-    validate_data, validate_correct = csv_to_data(validate_csv)
-    #train_data, train_correct = csv_to_data(train_csv)
-    #suffle(train_data,train_correct,validate_data,validate_correct)
-    # x = np.split(train_data[0],1024)
-    kernels = [np.random.uniform(1,-1,(3,3)) for i in range(3*12) ]
-    kernels = np.array(kernels).reshape((3,12,3,3))
-    layer = ConvolutionLayer((12,32,32),1,False)
+    # validate_data, validate_correct = csv_to_data(validate_csv)
+    train_data, train_correct = csv_to_data(train_csv)
+    kernels = [np.random.uniform(1, -1, (3, 3)) for i in range(3 * 12)]
+    kernels = np.array(kernels).reshape((3, 12, 3, 3))
+    kernel = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
+    shape = ((3, 32, 32), (16, 32, 32))
+    net = CNN(shape)
+    net._feed_forward(train_data[0])
 
-    for data in validate_data:
-        layer.feed(layer.convu(data,kernels))
-    x = 5
+    output = net.layers[0].feed(train_data[0])
+    net.layers[1].feed(output)
+    x = net.layers[1].max_pooling()
 
-    convu(validate_data[0],kernels)
+    x = datetime.now()
     for i in train_data:
-        perform_convolution(i,)
+        grad = np.array((signal.convolve2d(i[0], kernel, boundary='fill', mode='same'),
+                         signal.convolve2d(i[0], kernel, boundary='fill', mode='same'),
+                         signal.convolve2d(i[0], kernel, boundary='fill', mode='same')))
+    x = datetime.now() - x
+    print(f"x time = {x}")
 
-
-    save_image(validate_data[0], "before.bmp")
-    result = perform_convolution(validate_data[0], kernel)
-    save_image(result, "after.bmp")
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
