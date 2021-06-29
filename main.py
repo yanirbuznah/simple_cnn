@@ -1,4 +1,3 @@
-# This is a sample Python script.
 import sys
 from datetime import datetime
 from typing import Tuple, List
@@ -101,10 +100,11 @@ def main():
     shape = ((3, 32, 32), (16, 32, 32))
     net = CNN(shape)
     net._feed_forward(train_data[0])
+    net._calculate_errors(train_correct[0])
 
     output = net.layers[0].feed(train_data[0])
     net.layers[1].feed(output)
-    x = net.layers[1].max_pooling()
+    x = net.layers[1]._do_max_pooling()
 
     x = datetime.now()
     for i in train_data:

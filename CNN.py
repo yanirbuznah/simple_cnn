@@ -1,5 +1,4 @@
-# This is a sample Python script.
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -10,14 +9,14 @@ from MaxPoolingLayer import MaxPoolingLayer
 
 
 class CNN(object):
-    def __init__(self, layers_shapes: List[int], learning_rate=0.001, randrange=0.01):
+    def __init__(self, layers_shapes: Tuple, learning_rate=0.001, randrange=0.01):
         self.randrange = randrange
 
         self.init_layers(layers_shapes)
         self.input_layer = self.layers[0]
         self.output_layer = self.layers[-1]
 
-        output_size = self.output_layer.shape[0] * self.output_layer.shape[1] * self.output_layer.shape[2]
+        output_size = np.prod(self.output_layer.output_shape)
         self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(output_size, config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION)
 
 
@@ -49,14 +48,25 @@ class CNN(object):
         values = input_values
         for index in range(0,len(self.layers), 2):
             result = self.layers[index].feed(values)
-            #TODO: Check if true!
-            if index != len(self.layers)-2:
-                values = self.layers[index + 1].feed(result)
+            # #TODO: Check if true!
+            # TODO: Probably not true. Last layer must be MaxPooling
+            # if index != len(self.layers)-2:
+            #     values = self.layers[index + 1].feed(result)
+            values = self.layers[index + 1].feed(result)
 
-        flattened = result.flatten()
+        flattened = values.flatten()
         self._fully_connected_net.feed_forward(flattened)
 
-        x = 6
+    def _calculate_errors(self, correct_output: np.array):
+        errors = []
+        # Calculate fully connected errors. First fully connected error will be at errors[0]
+        errors.extend(self._fully_connected_net.calculate_errors(correct_output))
+
+        fully_connected_input_no_bias = errors[0][:-1]
+        prev_layer_error = fully_connected_input_no_bias.reshape(self.layers[-1].output_shape)
+        for layer in self.layers[::-1]:
+            errors.insert(0, layer.calculate_errors(prev_layer_error))
+            prev_layer_error = errors[0]
 
         # self.input_layer.feed(input_values)
         # for layer in self.layers

@@ -57,6 +57,10 @@ class NeuralNetwork(object):
 
 
     def feed_forward(self, input_values: np.array):
+        self._clear_feeded_values()
+
+        # Append one zero for bias neuron
+        input_values = np.append(input_values, [0])
         self.input_layer.feed(input_values)
         for layer in self.hidden_layers + [self.output_layer]:
             prev_layer_index = layer.index - 1
@@ -70,7 +74,7 @@ class NeuralNetwork(object):
     def set_weights(self, weights):
         self.weights = weights
 
-    def _calculate_errors(self, correct_output: np.array):
+    def calculate_errors(self, correct_output: np.array):
         errors = []
         prev_layer_error = correct_output - self.output_layer.feeded_values
         errors.insert(0, prev_layer_error)

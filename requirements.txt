@@ -1,0 +1,5 @@
+skimage
+numpy
+pandas
+scipy
+opencv-python

@@ -1,5 +1,3 @@
-# This is a sample Python script.
-
 import numpy as np
 from scipy import ndimage
 
@@ -10,7 +8,8 @@ class ConvolutionLayer(object):
     def __init__(self, shape, index: int, with_bias, next_weights):
         self.index = index
         self.bias = with_bias
-        self.shape = shape
+        self.input_shape = shape
+        self.output_shape = (next_weights.shape[1], shape[1], shape[2])
         self.next_weights = next_weights
         if with_bias:
             self.size += 1
@@ -22,21 +21,24 @@ class ConvolutionLayer(object):
         if self.bias:
             self.feeded_values[-1] = -1
 
-        return self.convu()
+        return ActivationFunction.ReLU.f(self._do_convolution(self.feeded_values))
 
     def clear_feeded_values(self):
-        self.feeded_values = np.zeros(self.shape)
+        self.feeded_values = np.zeros(self.input_shape)
         # update the bias neuron to -1
         if self.bias:
             self.feeded_values[-1] = -1
 
-    def convu(self):
-        result = np.zeros((self.next_weights.shape[1], self.shape[1], self.shape[2]))
-        for i in range(self.next_weights.shape[1]):
-            for j in range(self.shape[0]):
-                result[i] += ndimage.convolve(self.feeded_values[j], self.next_weights[j][i], mode="constant", cval=0.0)
+    def calculate_errors(self, prev_layer_error: np.array):
+        return ActivationFunction.ReLU.d(self._do_convolution(prev_layer_error))
 
-        return ActivationFunction.ReLU.f(result)
+    def _do_convolution(self, input_values):
+        result = np.zeros(self.output_shape)
+        for i in range(self.output_shape[0]):
+            for j in range(self.input_shape[0]):
+                result[i] += ndimage.convolve(input_values[j], self.next_weights[j][i], mode="constant", cval=0.0)
+
+        return result
 
     def __repr__(self):
         return self.feeded_values.__repr__()
