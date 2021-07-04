@@ -5,9 +5,6 @@ from common import ActivationFunction
 
 import numpy as np
 
-if config.USE_GPU:
-    import cupy as np
-    from cupyx.scipy import ndimage
 
 class ConvolutionLayer(object):
     def __init__(self, shape, index: int, with_bias, next_weights):

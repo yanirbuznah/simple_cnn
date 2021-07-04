@@ -6,9 +6,6 @@ import numpy as np
 
 import config
 
-if config.USE_GPU:
-    import cupy as np
-    import cucim.skimage.measure as measure
 
 
 class MaxPoolingLayer(object):

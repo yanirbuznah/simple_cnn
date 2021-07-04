@@ -9,8 +9,7 @@ from MaxPoolingLayer import MaxPoolingLayer
 
 import numpy as np
 
-if config.USE_GPU:
-    import cupy as np
+
 
 class CNN(object):
     def __init__(self, layers_shapes: Tuple, learning_rate=0.001, randrange=0.01):
@@ -21,7 +20,7 @@ class CNN(object):
         self.output_layer = self.layers[-1]
 
         output_size = numpy.prod(self.output_layer.output_shape)
-        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(output_size, config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION)
+        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(output_size.item(), config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION)
 
 
     # self.weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]

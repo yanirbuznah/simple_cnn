@@ -23,9 +23,6 @@ import numpy as np
 
 import pickle
 
-if USE_GPU:
-    import cupy
-    import cupy as np
 
 SHOULD_STOP = False
 
