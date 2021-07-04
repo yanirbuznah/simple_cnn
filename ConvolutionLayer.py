@@ -27,7 +27,8 @@ class ConvolutionLayer(object):
         if self.bias:
             self.feeded_values[-1] = -1
 
-        return ActivationFunction.ReLU.f(self._do_convolution(self.feeded_values))
+        #return ActivationFunction.ReLU.f(self._do_convolution(self.feeded_values))
+        return self._do_convolution(self.feeded_values)
 
     def clear_feeded_values(self):
         self.feeded_values = np.zeros(self.input_shape)
@@ -37,24 +38,29 @@ class ConvolutionLayer(object):
 
     @timeit
     def calculate_errors(self, prev_layer_error: np.array):
-        return ActivationFunction.ReLU.d(self._do_convolution(prev_layer_error, forward=False))
+        #return ActivationFunction.ReLU.d(self.feeded_values) * self._do_convolution(prev_layer_error, forward=False)
+        return self._do_convolution(prev_layer_error, forward=False)
 
     @timeit
-    def update_weights(self, error, lr):
+    def update_weights(self, prev_error, lr):
         for i in range(self.output_shape[0]):
             for j in range(self.input_shape[0]):
                 w = self.next_weights[j][i]
-                w[0][0] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((1,0),(1,0)), mode='constant')[:-1, :-1])  # bottom right
-                w[0][1] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((1,0),(0,0)), mode='constant')[:-1, :]) # bottom
-                w[0][2] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((1,0),(0,1)), mode='constant')[:-1, 1:])   # bottom left
+                #feeded_values = ActivationFunction.ReLU.d(self.feeded_values[j])
+                feeded_values = self.feeded_values[j]
+                error = prev_error[i]
 
-                w[1][0] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((0,0),(1,0)), mode='constant')[:, :-1]) # right
-                w[1][1] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * error[i]) # center
-                w[1][2] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((0,0),(0,1)), mode='constant')[:, 1:]) # left
+                w[0][0] += lr * np.sum(feeded_values * np.pad(error, ((1, 0), (1, 0)), mode='constant')[:-1, :-1])  # bottom right
+                w[0][1] += lr * np.sum(feeded_values * np.pad(error, ((1, 0), (0, 0)), mode='constant')[:-1, :]) # bottom
+                w[0][2] += lr * np.sum(feeded_values * np.pad(error, ((1, 0), (0, 1)), mode='constant')[:-1, 1:])   # bottom left
 
-                w[2][0] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((0,1),(1,0)), mode='constant')[1:, :-1])   # top right
-                w[2][1] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((0,1),(0,0)), mode='constant')[1:, :]) # top
-                w[2][2] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((0,1),(0,1)), mode='constant')[1:, 1:])   # top left
+                w[1][0] += lr * np.sum(feeded_values * np.pad(error, ((0, 0), (1, 0)), mode='constant')[:, :-1]) # right
+                w[1][1] += lr * np.sum(feeded_values * error) # center
+                w[1][2] += lr * np.sum(feeded_values * np.pad(error, ((0, 0), (0, 1)), mode='constant')[:, 1:]) # left
+
+                w[2][0] += lr * np.sum(feeded_values * np.pad(error, ((0, 1), (1, 0)), mode='constant')[1:, :-1])   # top right
+                w[2][1] += lr * np.sum(feeded_values * np.pad(error, ((0, 1), (0, 0)), mode='constant')[1:, :]) # top
+                w[2][2] += lr * np.sum(feeded_values * np.pad(error, ((0, 1), (0, 1)), mode='constant')[1:, 1:])   # top left
 
     def _rotate_180(self, mat: np.array):
         ret = np.copy(mat)

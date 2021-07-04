@@ -21,7 +21,7 @@ class CNN(object):
         self.output_layer = self.layers[-1]
 
         output_size = numpy.prod(self.output_layer.output_shape)
-        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(output_size, config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION)
+        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(int(output_size), config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION, learning_rate, randrange)
 
 
     # self.weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]
@@ -44,7 +44,7 @@ class CNN(object):
         index = 2
         size //= 2
         while size > 4:
-            weights = np.random.uniform(1, -1, (count, count * 2, 3, 3))
+            weights = np.random.uniform(self.randrange, -self.randrange, (count, count * 2, 3, 3))
             self.layers.append(ConvolutionLayer((count, size, size), index, False, next_weights=weights))
             count *= 2
             index += 1
