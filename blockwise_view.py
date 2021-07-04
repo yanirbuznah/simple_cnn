@@ -2,6 +2,11 @@ from __future__ import division
 from builtins import map
 import numpy
 
+import config
+
+if config.USE_GPU:
+    import cupy as numpy
+
 try:
     # If you use vigra, we do special handling to preserve axistags
     import vigra

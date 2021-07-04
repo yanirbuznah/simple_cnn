@@ -12,7 +12,7 @@ class NeuralLayer(object):
     def __init__(self, size: int, index: int,with_bias):
         self.index = index
         self.bias = with_bias
-        self.size = size
+        self.size = int(size)
         if with_bias:
             self.size += 1
         #self.clear_feeded_values()
