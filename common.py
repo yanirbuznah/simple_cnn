@@ -1,3 +1,4 @@
+import time
 from enum import Enum
 
 import numpy as np
@@ -16,3 +17,18 @@ ActivationFunction.Sigmoid = ActivationFunction(lambda a: 1/(1+np.exp(-a)), lamb
 class AdaptiveLearningRateMode(Enum):
     PREDEFINED_DICT = 1
     FORMULA = 2
+
+
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        if 'log_time' in kw:
+            name = kw.get('log_name', method.__name__.upper())
+            kw['log_time'][name] = int((te - ts) * 1000)
+        else:
+            print('%r  %2.2f ms' % \
+                  (method.__name__, (te - ts) * 1000))
+        return result
+    return timed

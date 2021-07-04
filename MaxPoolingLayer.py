@@ -6,6 +6,7 @@ import numpy
 import numpy as np
 
 import config
+from common import timeit
 
 if config.USE_GPU:
     import cupy as np
