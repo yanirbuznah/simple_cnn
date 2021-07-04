@@ -9,8 +9,6 @@ from MaxPoolingLayer import MaxPoolingLayer
 
 import numpy as np
 
-from common import timeit
-
 if config.USE_GPU:
     import cupy as np
 
@@ -58,7 +56,6 @@ class CNN(object):
         for layer in self.layers:
             layer.clear_feeded_values()
 
-    @timeit
     def train_sample(self, input_values: np.array, correct_output: np.array):
         errors = []
         self._clear_feeded_values()
@@ -83,7 +80,6 @@ class CNN(object):
         #print(prediction, correct, f"Certainty: {self.output_layer.feeded_values[prediction]}")
         return correct == prediction, self.output_layer.feeded_values[prediction]
 
-    @timeit
     def _feed_forward(self,input_values):
         values = input_values
         for index in range(0,len(self.layers), 2):
@@ -97,7 +93,6 @@ class CNN(object):
         flattened = values.flatten()
         return flattened
 
-    @timeit
     def _calculate_errors(self, prev_layer_error: np.array):
         errors = []
         for layer in self.layers[::-1]:
@@ -106,7 +101,6 @@ class CNN(object):
 
         return errors
 
-    @timeit
     def _update_weights(self, errors):
         for layer in self.layers[:-1][::-1]:
             if type(layer) == MaxPoolingLayer:

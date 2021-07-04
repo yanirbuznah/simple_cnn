@@ -1,7 +1,7 @@
 from typing import List
 
 import config
-from common import ActivationFunction
+from common import ActivationFunction, timeit
 
 import numpy as np
 
@@ -71,7 +71,7 @@ class NeuralNetwork(object):
 
         return errors[0]
 
-
+    @timeit
     def feed_forward(self, input_values: np.array):
         self._clear_feeded_values()
 
@@ -90,6 +90,7 @@ class NeuralNetwork(object):
     def set_weights(self, weights):
         self.weights = weights
 
+    @timeit
     def calculate_errors(self, correct_output: np.array):
         errors = []
         prev_layer_error = correct_output - self.output_layer.feeded_values
@@ -101,6 +102,7 @@ class NeuralNetwork(object):
 
         return errors
 
+    @timeit
     def update_weights(self, errors: List[np.array]):
         for layer in self.layers[:-1][::-1]:
             self.weights[layer.index] = self.weights[layer.index] + self.lr * np.outer(self.activation_function.f(layer.feeded_values), errors[layer.index + 1])

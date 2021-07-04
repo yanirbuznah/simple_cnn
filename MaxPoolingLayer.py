@@ -31,6 +31,7 @@ class MaxPoolingLayer(object):
         if self.bias:
             self.feeded_values[-1] = -1
 
+    @timeit
     def feed(self, values: np.array):
         self.feeded_values += values
         # make sure that the bias still shut -1
@@ -69,6 +70,7 @@ class MaxPoolingLayer(object):
 
         return mask
 
+    @timeit
     def calculate_errors(self, prev_layer_error: np.array):
         result = np.zeros(self.input_shape)
         for i in range(self.feeded_values.shape[0]):
