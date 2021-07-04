@@ -65,10 +65,10 @@ def blockwise_view(a, blockshape, aslist=False, require_aligned_blocks=True):
     outershape = tuple(numpy.array(a.shape) // blockshape)
     view_shape = outershape + blockshape
 
-    if require_aligned_blocks:
-        assert (
-            numpy.mod(a.shape, blockshape) == 0
-        ).all(), "blockshape {} must divide evenly into array shape {}".format(blockshape, a.shape)
+    # if require_aligned_blocks:
+    #     assert (
+    #         np.mod(a.shape, blockshape) == 0
+    #     ).all(), "blockshape {} must divide evenly into array shape {}".format(blockshape, a.shape)
 
     # inner strides: strides within each block (same as original array)
     intra_block_strides = a.strides
@@ -86,5 +86,5 @@ def blockwise_view(a, blockshape, aslist=False, require_aligned_blocks=True):
         view = vigra.taggedView(view, view_axistags)
 
     if aslist:
-        return list(map(view.__getitem__, numpy.ndindex(outershape)))
+        return list(map(view.__getitem__, np.ndindex(outershape)))
     return view

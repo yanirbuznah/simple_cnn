@@ -52,17 +52,19 @@ class MaxPoolingLayer(object):
         mask = np.equal(feeded, outputed.repeat(2, axis=0).repeat(2, axis=1)).astype(int)
 
         # if multiple neurons in the same group were the same value, choose one arbitrarily
-        split_mask = blockwise_view.blockwise_view(mask, (2, 2), aslist=True)
-        for mask_item in split_mask:
-            s = mask_item.sum()
-            if s == 1:
-                continue
+        split_mask = blockwise_view.blockwise_view(mask, (2, 2), aslist=False)
+        for i in range(split_mask.shape[0]):
+            for j in range(split_mask.shape[1]):
+                mask_item = split_mask[i][j]
+                s = mask_item.sum()
+                if s == 1:
+                    continue
 
-            # Choose a random neuron index in the mask item that will take the error
-            index = np.random.choice(np.nonzero(mask_item.reshape(4))[0], size=1)
-            index = np.unravel_index(index, (2, 2))
-            mask_item.fill(0)
-            mask_item[index] = 1
+                # Choose a random neuron index in the mask item that will take the error
+                index = np.random.choice(np.nonzero(mask_item.reshape(4))[0], size=1)[0]  # Must give size for cupy
+                index = np.unravel_index(index, (2, 2))
+                mask_item.fill(0)
+                mask_item[index] = 1
 
         return mask
 
