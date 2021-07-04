@@ -1,12 +1,14 @@
 from typing import List, Tuple
 
-import numpy as np
-
 import FullyConnectedNetwork
 import config
 from ConvolutionLayer import ConvolutionLayer
 from MaxPoolingLayer import MaxPoolingLayer
 
+import numpy as np
+
+if config.USE_GPU:
+    import cupy as np
 
 class CNN(object):
     def __init__(self, layers_shapes: Tuple, learning_rate=0.001, randrange=0.01):

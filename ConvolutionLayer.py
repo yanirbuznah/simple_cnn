@@ -1,8 +1,12 @@
-import numpy as np
 from scipy import ndimage
 
+import config
 from common import ActivationFunction
 
+import numpy as np
+
+if config.USE_GPU:
+    import cupy as np
 
 class ConvolutionLayer(object):
     def __init__(self, shape, index: int, with_bias, next_weights):

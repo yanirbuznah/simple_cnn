@@ -1,7 +1,13 @@
-import numpy as np
 import skimage.measure
 
 import blockwise_view
+
+import numpy as np
+
+import config
+
+if config.USE_GPU:
+    import cupy as np
 
 
 class MaxPoolingLayer(object):

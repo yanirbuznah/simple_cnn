@@ -1,10 +1,12 @@
 from typing import List
 
-import numpy as np
-
 import config
 from common import ActivationFunction
 
+import numpy as np
+
+if config.USE_GPU:
+    import cupy as np
 
 class NeuralLayer(object):
     def __init__(self, size: int, index: int,with_bias):
