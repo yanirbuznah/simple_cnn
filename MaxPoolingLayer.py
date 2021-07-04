@@ -2,6 +2,7 @@ import skimage.measure as measure
 
 import blockwise_view
 
+import numpy
 import numpy as np
 
 import config
@@ -58,7 +59,7 @@ class MaxPoolingLayer(object):
                 continue
 
             # Choose a random neuron index in the mask item that will take the error
-            index = np.random.choice(np.nonzero(mask_item.reshape(4))[0])
+            index = np.random.choice(np.nonzero(mask_item.reshape(4))[0], size=1)
             index = np.unravel_index(index, (2, 2))
             mask_item.fill(0)
             mask_item[index] = 1

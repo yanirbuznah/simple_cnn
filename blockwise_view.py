@@ -1,11 +1,13 @@
 from __future__ import division
 from builtins import map
+
 import numpy
+import numpy as np
 
 import config
 
 if config.USE_GPU:
-    import cupy as numpy
+    import cupy as np
 
 try:
     # If you use vigra, we do special handling to preserve axistags
@@ -36,7 +38,7 @@ def blockwise_view(a, blockshape, aslist=False, require_aligned_blocks=True):
                                 If False, "leftover" items that cannot be made into complete blocks
                                 will be discarded from the output view.
     Here's a 2D example (this function also works for ND):
-    >>> a = numpy.arange(1,21).reshape(4,5)
+    >>> a = np.arange(1,21).reshape(4,5)
     >>> print(a)
     [[ 1  2  3  4  5]
      [ 6  7  8  9 10]
@@ -76,7 +78,7 @@ def blockwise_view(a, blockshape, aslist=False, require_aligned_blocks=True):
 
     # This is where the magic happens.
     # Generate a view with our new strides (outer+inner).
-    view = numpy.lib.stride_tricks.as_strided(a, shape=view_shape, strides=(inter_block_strides + intra_block_strides))
+    view = np.lib.stride_tricks.as_strided(a, shape=view_shape, strides=(inter_block_strides + intra_block_strides))
 
     # Special handling for VigraArrays
     if _vigra_available and isinstance(a, vigra.VigraArray) and hasattr(a, "axistags"):
