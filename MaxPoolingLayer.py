@@ -1,4 +1,4 @@
-import skimage.measure
+import skimage.measure as measure
 
 import blockwise_view
 
@@ -8,6 +8,7 @@ import config
 
 if config.USE_GPU:
     import cupy as np
+    import cucim.skimage.measure as measure
 
 
 class MaxPoolingLayer(object):
@@ -77,7 +78,7 @@ class MaxPoolingLayer(object):
     def _do_max_pooling(self):
         result = np.zeros(self.output_shape)
         for i in range(self.feeded_values.shape[0]):
-            result[i] += skimage.measure.block_reduce(self.feeded_values[i], (2, 2), self._abs_max)
+            result[i] += measure.block_reduce(self.feeded_values[i], (2, 2), self._abs_max)
 
         return result
 

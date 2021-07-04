@@ -1,5 +1,7 @@
 from typing import List, Tuple
 
+import numpy
+
 import FullyConnectedNetwork
 import config
 from ConvolutionLayer import ConvolutionLayer
@@ -18,7 +20,7 @@ class CNN(object):
         self.input_layer = self.layers[0]
         self.output_layer = self.layers[-1]
 
-        output_size = np.prod(self.output_layer.output_shape)
+        output_size = numpy.prod(self.output_layer.output_shape)
         self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(output_size, config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION)
 
 
