@@ -53,7 +53,22 @@ class NeuralNetwork(object):
 
     @staticmethod
     def softmax(x):
-        return  np.exp(x)/sum(np.exp(x))
+        print(f"{np.exp(x)/sum(np.exp(x)) = }")
+        return np.exp(x)/sum(np.exp(x))
+
+    def train_sample(self, input_values: np.array, correct_output: np.array):
+        errors = []
+        self._clear_feeded_values()
+        self.feed_forward(input_values)
+        current_errors = self.calculate_errors(correct_output)
+        if not errors:
+            errors = current_errors
+        else:
+            errors = [sum(l) for l in zip(errors, current_errors)]
+
+        self.update_weights(errors)
+
+        return errors[0]
 
 
     def feed_forward(self, input_values: np.array):
@@ -85,7 +100,7 @@ class NeuralNetwork(object):
 
         return errors
 
-    def _update_weights(self, errors: List[np.array]):
+    def update_weights(self, errors: List[np.array]):
         for layer in self.layers[:-1][::-1]:
             self.weights[layer.index] = self.weights[layer.index] + self.lr * np.outer(self.activation_function.f(layer.feeded_values), errors[layer.index + 1])
 

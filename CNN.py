@@ -25,6 +25,11 @@ class CNN(object):
         #        self.activation_function = activation_function
         self.lr = learning_rate
 
+    @property
+    def weights(self):
+        print("TODO: FIX IT")
+        return np.zeros((1,1))
+
     def init_layers(self, layers_shapes):
         count, size, _ = layers_shapes[1]
         self.layers = []
@@ -43,6 +48,33 @@ class CNN(object):
             index += 1
             size //= 2
 
+    def _clear_feeded_values(self):
+        for layer in self.layers:
+            layer.clear_feeded_values()
+
+    def train_sample(self, input_values: np.array, correct_output: np.array):
+        errors = []
+        self._clear_feeded_values()
+        flattened_out = self._feed_forward(input_values)
+
+        fully_connected_error = self._fully_connected_net.train_sample(flattened_out, correct_output)
+        fully_connected_input_no_bias = fully_connected_error[:-1]
+        fully_connected_error = fully_connected_input_no_bias.reshape(self.layers[-1].output_shape)
+
+        errors += self._calculate_errors(fully_connected_error)
+        self._update_weights(errors)
+
+    def classify_sample(self, input_values: np.array):
+        self._clear_feeded_values()
+        self._feed_forward(input_values)
+        prediction = np.argmax(self.output_layer.feeded_values)
+        return prediction
+
+    def validate_sample(self, input_values: np.array, correct_output: np.array):
+        prediction = self.classify_sample(input_values)
+        correct = np.argmax(correct_output)
+        #print(prediction, correct, f"Certainty: {self.output_layer.feeded_values[prediction]}")
+        return correct == prediction, self.output_layer.feeded_values[prediction]
 
     def _feed_forward(self,input_values):
         values = input_values
@@ -55,18 +87,21 @@ class CNN(object):
             values = self.layers[index + 1].feed(result)
 
         flattened = values.flatten()
-        self._fully_connected_net.feed_forward(flattened)
+        return flattened
 
-    def _calculate_errors(self, correct_output: np.array):
+    def _calculate_errors(self, prev_layer_error: np.array):
         errors = []
-        # Calculate fully connected errors. First fully connected error will be at errors[0]
-        errors.extend(self._fully_connected_net.calculate_errors(correct_output))
-
-        fully_connected_input_no_bias = errors[0][:-1]
-        prev_layer_error = fully_connected_input_no_bias.reshape(self.layers[-1].output_shape)
         for layer in self.layers[::-1]:
             errors.insert(0, layer.calculate_errors(prev_layer_error))
             prev_layer_error = errors[0]
+
+        return errors
+
+    def _update_weights(self, errors):
+        for layer in self.layers[:-1][::-1]:
+            if type(layer) == MaxPoolingLayer:
+                continue
+            layer.update_weights(errors[layer.index + 1], self.lr)
 
         # self.input_layer.feed(input_values)
         # for layer in self.layers
