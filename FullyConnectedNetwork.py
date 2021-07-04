@@ -53,7 +53,6 @@ class NeuralNetwork(object):
 
     @staticmethod
     def softmax(x):
-        print(f"{np.exp(x)/sum(np.exp(x)) = }")
         return np.exp(x)/sum(np.exp(x))
 
     def train_sample(self, input_values: np.array, correct_output: np.array):
