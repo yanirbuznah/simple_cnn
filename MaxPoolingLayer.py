@@ -50,45 +50,21 @@ class MaxPoolingLayer(object):
                 .swapaxes(1, 2)
                 .reshape(-1, nrows, ncols))
 
-    def _calc_error_mask(self, feeded, outputed):
-        mask = np.equal(feeded, outputed.repeat(2, axis=0).repeat(2, axis=1)).astype(int)
-
-        # if multiple neurons in the same group were the same value, choose one arbitrarily
-        split_mask = blockwise_view.blockwise_view(mask, (2, 2), aslist=False)
-        for i in range(split_mask.shape[0]):
-            for j in range(split_mask.shape[1]):
-                mask_item = split_mask[i][j]
-                s = mask_item.sum()
-                if s == 1:
-                    continue
-
-                # Choose a random neuron index in the mask item that will take the error
-                index = np.random.choice(np.nonzero(mask_item.reshape(4))[0], size=1)[0]  # Must give size for cupy
-                index = np.unravel_index(index, (2, 2))
-                mask_item.fill(0)
-                mask_item[index] = 1
-
-        return mask
-
     @timeit
     def calculate_errors(self, prev_layer_error: np.array):
         result = np.zeros(self.input_shape)
-        for i in range(self.feeded_values.shape[0]):
-            # Find which neurons caused the errors
-            mask = self._calc_error_mask(self.feeded_values[i], self.outputed_values[i])
-            errors = prev_layer_error[i].repeat(2, axis=0).repeat(2, axis=1) * mask
-            result[i] += errors
+        for feature_map_index, feature_map in enumerate(self.feeded_values):
+            for i in range(prev_layer_error[feature_map_index].shape[0]):
+                for j in range(prev_layer_error[feature_map_index].shape[1]):
+                    pool = np.array(feature_map[i * 2:i * 2 + 2, j * 2:j * 2 + 2])
+                    max_i, max_j = np.unravel_index(pool.argmax(), pool.shape)
+                    result[feature_map_index][i * 2 + max_i][j * 2 + max_j] += prev_layer_error[feature_map_index][i][j]
 
         return result
 
     def _do_max_pooling(self):
         result = np.zeros(self.output_shape)
         for i in range(self.feeded_values.shape[0]):
-            result[i] += measure.block_reduce(self.feeded_values[i], (2, 2), self._abs_max)
+            result[i] += measure.block_reduce(self.feeded_values[i], (2, 2), np.max)
 
         return result
-
-    def _abs_max(self, a, axis=None):
-        amax = a.max(axis)
-        amin = a.min(axis)
-        return np.where(-amin > amax, amin, amax)

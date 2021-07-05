@@ -239,7 +239,7 @@ def main():
     print(" ==========================")
 
     shape = ((3, 32, 32), (16, 32, 32))
-    net = CNN(shape, LEARNING_RATE, RANDRANGE)
+    net = CNN(shape, config.FULLY_CONNECTED_FEATURE_MAP_DIM, LEARNING_RATE, RANDRANGE)
     csv_results = [["epoch", "LR", "train_accuracy", "train_certainty", "validate_accuracy", "validate_certainty"]]
 
     #    if SEPARATE_VALIDATE:

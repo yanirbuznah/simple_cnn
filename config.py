@@ -8,6 +8,7 @@ from common import ActivationFunction, AdaptiveLearningRateMode
 SEED = random.randint(0, 100000000)
 HIDDEN_LAYERS_SIZES = [1000,1000]
 OUTPUT_LAYER_SIZE = 10
+FULLY_CONNECTED_FEATURE_MAP_DIM = 8
 ACTIVATION_FUNCTION = ActivationFunction.ReLU
 RANDRANGE = 0.05
 LEARNING_RATE = 0.0003

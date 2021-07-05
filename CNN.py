@@ -13,10 +13,10 @@ if config.USE_GPU:
     import cupy as np
 
 class CNN(object):
-    def __init__(self, layers_shapes: Tuple, learning_rate=0.001, randrange=0.01):
+    def __init__(self, first_layers_shapes: Tuple, fully_connected_feature_map_dim, learning_rate=0.001, randrange=0.01):
         self.randrange = randrange
 
-        self.init_layers(layers_shapes)
+        self.init_layers(first_layers_shapes, fully_connected_feature_map_dim)
         self.input_layer = self.layers[0]
         self.output_layer = self.layers[-1]
 
@@ -34,7 +34,7 @@ class CNN(object):
         print("TODO: FIX IT")
         return np.zeros((1,1))
 
-    def init_layers(self, layers_shapes):
+    def init_layers(self, layers_shapes, fully_connected_feature_map_dim):
         count, size, _ = layers_shapes[1]
         self.layers = []
         weights = np.random.uniform(self.randrange, -self.randrange, (layers_shapes[0][0], count, 3, 3))
@@ -43,7 +43,7 @@ class CNN(object):
         self.layers.append(MaxPoolingLayer(layers_shapes[1], 1, False, prev_weights=weights))
         index = 2
         size //= 2
-        while size > 4:
+        while size > fully_connected_feature_map_dim:
             weights = np.random.uniform(self.randrange, -self.randrange, (count, count * 2, 3, 3))
             self.layers.append(ConvolutionLayer((count, size, size), index, False, next_weights=weights))
             count *= 2
@@ -70,7 +70,8 @@ class CNN(object):
 
     def classify_sample(self, input_values: np.array):
         self._clear_feeded_values()
-        self._feed_forward(input_values)
+        flattened_out = self._feed_forward(input_values)
+        self._fully_connected_net.feed_forward(flattened_out)
         prediction = np.argmax(self._fully_connected_net.output_layer.feeded_values)
         return prediction
 
