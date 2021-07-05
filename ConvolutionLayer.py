@@ -44,23 +44,22 @@ class ConvolutionLayer(object):
     @timeit
     def update_weights(self, prev_error, lr):
         for i in range(self.output_shape[0]):
+            x = np.pad(prev_error[i], ((1, 1), (1, 1)), mode='constant')
             for j in range(self.input_shape[0]):
                 w = self.next_weights[j][i]
-                #feeded_values = ActivationFunction.ReLU.d(self.feeded_values[j])
-                feeded_values = self.feeded_values[j]
-                error = prev_error[i]
+                #err = ActivationFunction.ReLU.d(self.feeded_values[j])
+                err = self.feeded_values[j]
+                w[0][0] += lr * np.sum(err * x[:-2, :-2])  # bottom right
+                w[0][1] += lr * np.sum(err * x[:-2, 1:-1])  # bottom
+                w[0][2] += lr * np.sum(err * x[:-2, 2:])  # bottom left
 
-                w[0][0] += lr * np.sum(feeded_values * np.pad(error, ((1, 0), (1, 0)), mode='constant')[:-1, :-1])  # bottom right
-                w[0][1] += lr * np.sum(feeded_values * np.pad(error, ((1, 0), (0, 0)), mode='constant')[:-1, :]) # bottom
-                w[0][2] += lr * np.sum(feeded_values * np.pad(error, ((1, 0), (0, 1)), mode='constant')[:-1, 1:])   # bottom left
+                w[1][0] += lr * np.sum(err * x[1:-1, :-2])  # right
+                w[1][1] += lr * np.sum(err * prev_error[i])  # center
+                w[1][2] += lr * np.sum(err * x[1:-1, 2:])  # left
 
-                w[1][0] += lr * np.sum(feeded_values * np.pad(error, ((0, 0), (1, 0)), mode='constant')[:, :-1]) # right
-                w[1][1] += lr * np.sum(feeded_values * error) # center
-                w[1][2] += lr * np.sum(feeded_values * np.pad(error, ((0, 0), (0, 1)), mode='constant')[:, 1:]) # left
-
-                w[2][0] += lr * np.sum(feeded_values * np.pad(error, ((0, 1), (1, 0)), mode='constant')[1:, :-1])   # top right
-                w[2][1] += lr * np.sum(feeded_values * np.pad(error, ((0, 1), (0, 0)), mode='constant')[1:, :]) # top
-                w[2][2] += lr * np.sum(feeded_values * np.pad(error, ((0, 1), (0, 1)), mode='constant')[1:, 1:])   # top left
+                w[2][0] += lr * np.sum(err * x[2:, :-2])  # top right
+                w[2][1] += lr * np.sum(err * x[2:, 1:-1])  # top
+                w[2][2] += lr * np.sum(err * x[2:, 2:])
 
     def _rotate_180(self, mat: np.array):
         ret = np.copy(mat)
