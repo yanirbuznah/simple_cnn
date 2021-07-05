@@ -27,8 +27,12 @@ class ConvolutionLayer(object):
         if self.bias:
             self.feeded_values[-1] = -1
 
-        #return ActivationFunction.ReLU.f(self._do_convolution(self.feeded_values))
-        return self._do_convolution(self.feeded_values)
+        result = np.zeros(self.output_shape)
+        for i in range(self.output_shape[0]):
+            for j in range(self.input_shape[0]):
+                result[i] += self._do_convolution(self.feeded_values[j], self.next_weights[j][i])
+
+        return ActivationFunction.ReLU.f(result)
 
     def clear_feeded_values(self):
         self.feeded_values = np.zeros(self.input_shape)
@@ -38,8 +42,12 @@ class ConvolutionLayer(object):
 
     @timeit
     def calculate_errors(self, prev_layer_error: np.array):
-        #return ActivationFunction.ReLU.d(self.feeded_values) * self._do_convolution(prev_layer_error, forward=False)
-        return self._do_convolution(prev_layer_error, forward=False)
+        result = np.zeros(self.input_shape)
+        for i in range(self.output_shape[0]):
+            for j in range(self.input_shape[0]):
+                result[j] += ActivationFunction.ReLU.d(self.feeded_values[j]) * self._do_convolution(prev_layer_error[i], self.next_weights[j][i], forward=False)
+
+        return result
 
     @timeit
     def update_weights(self, prev_error, lr):
@@ -47,8 +55,8 @@ class ConvolutionLayer(object):
             x = np.pad(prev_error[i], ((1, 1), (1, 1)), mode='constant')
             for j in range(self.input_shape[0]):
                 w = self.next_weights[j][i]
-                #err = ActivationFunction.ReLU.d(self.feeded_values[j])
-                err = self.feeded_values[j]
+                err = ActivationFunction.ReLU.f(self.feeded_values[j])
+                #err = self.feeded_values[j]
                 w[0][0] += lr * np.sum(err * x[:-2, :-2])  # bottom right
                 w[0][1] += lr * np.sum(err * x[:-2, 1:-1])  # bottom
                 w[0][2] += lr * np.sum(err * x[:-2, 2:])  # bottom left
@@ -70,14 +78,9 @@ class ConvolutionLayer(object):
 
         return ret
 
-    def _do_convolution(self, input_values, forward=True):
-        result = np.zeros(self.output_shape)
-        for i in range(self.output_shape[0]):
-            for j in range(self.input_shape[0]):
-                kernel = self.next_weights[j][i] if forward else self._rotate_180(self.next_weights[j][i])
-                result[i] += ndimage.convolve(input_values[j], kernel, mode="constant", cval=0.0)
-
-        return result
+    def _do_convolution(self, input_values, kernel, forward=True):
+        kernel = kernel if forward else self._rotate_180(kernel)
+        return ndimage.convolve(input_values, kernel, mode="constant", cval=0.0)
 
     def __repr__(self):
         return self.feeded_values.__repr__()
