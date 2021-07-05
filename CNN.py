@@ -71,14 +71,14 @@ class CNN(object):
     def classify_sample(self, input_values: np.array):
         self._clear_feeded_values()
         self._feed_forward(input_values)
-        prediction = np.argmax(self.output_layer.feeded_values)
+        prediction = np.argmax(self._fully_connected_net.output_layer.feeded_values)
         return prediction
 
     def validate_sample(self, input_values: np.array, correct_output: np.array):
         prediction = self.classify_sample(input_values)
         correct = np.argmax(correct_output)
         #print(prediction, correct, f"Certainty: {self.output_layer.feeded_values[prediction]}")
-        return correct == prediction, self.output_layer.feeded_values[prediction]
+        return correct == prediction, self._fully_connected_net.output_layer.feeded_values[prediction]
 
     def _feed_forward(self,input_values):
         values = input_values
