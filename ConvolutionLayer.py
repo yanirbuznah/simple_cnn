@@ -54,20 +54,24 @@ class ConvolutionLayer(object):
         for i in range(self.output_shape[0]):
             x = np.pad(prev_error[i], ((1, 1), (1, 1)), mode='constant')
             for j in range(self.input_shape[0]):
+                deltas = np.zeros((3, 3))
                 w = self.next_weights[j][i]
-                err = ActivationFunction.ReLU.f(self.feeded_values[j])
-                #err = self.feeded_values[j]
-                w[0][0] += lr * np.sum(err * x[:-2, :-2])  # bottom right
-                w[0][1] += lr * np.sum(err * x[:-2, 1:-1])  # bottom
-                w[0][2] += lr * np.sum(err * x[:-2, 2:])  # bottom left
+                values = ActivationFunction.ReLU.f(self.feeded_values[j])
+                #values = self.feeded_values[j]
+                deltas[0][0] += np.sum(values * x[:-2, :-2])  # bottom right
+                deltas[0][1] += np.sum(values * x[:-2, 1:-1])  # bottom
+                deltas[0][2] += np.sum(values * x[:-2, 2:])  # bottom left
 
-                w[1][0] += lr * np.sum(err * x[1:-1, :-2])  # right
-                w[1][1] += lr * np.sum(err * prev_error[i])  # center
-                w[1][2] += lr * np.sum(err * x[1:-1, 2:])  # left
+                deltas[1][0] += np.sum(values * x[1:-1, :-2])  # right
+                deltas[1][1] += np.sum(values * prev_error[i])  # center
+                deltas[1][2] += np.sum(values * x[1:-1, 2:])  # left
 
-                w[2][0] += lr * np.sum(err * x[2:, :-2])  # top right
-                w[2][1] += lr * np.sum(err * x[2:, 1:-1])  # top
-                w[2][2] += lr * np.sum(err * x[2:, 2:])
+                deltas[2][0] += np.sum(values * x[2:, :-2])  # top right
+                deltas[2][1] += np.sum(values * x[2:, 1:-1])  # top
+                deltas[2][2] += np.sum(values * x[2:, 2:])
+
+                deltas *= lr
+                w += deltas
 
     def _rotate_180(self, mat: np.array):
         ret = np.copy(mat)
