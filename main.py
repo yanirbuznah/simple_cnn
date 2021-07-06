@@ -23,10 +23,6 @@ import numpy as np
 
 import pickle
 
-if USE_GPU:
-    import cupy
-    import cupy as np
-
 SHOULD_STOP = False
 
 
@@ -35,6 +31,7 @@ def set_seed(value):
     numpy.random.seed(value)
 
     if USE_GPU:
+        import cupy
         cupy.random.seed(value)
 
 
@@ -257,9 +254,6 @@ def main():
     if test_csv:
         print("Test csv provided")
         test_data, _ = csv_to_data(test_csv)
-        if USE_GPU:
-            print("Converting test array to GPU array")
-            test_data = np.array(test_data)
 
     if SHOULD_TRAIN:
         output_path.mkdir(exist_ok=True)
@@ -276,13 +270,6 @@ def main():
 
         if SHOULD_SHUFFLE:
             train_data,train_correct,validate_data,validate_correct = shuffle(train_data,train_correct,validate_data,validate_correct)
-
-        if USE_GPU:
-            print("Converting arrays to GPU arrays")
-            train_data = np.array(train_data)
-            train_correct = np.array(train_correct)
-            validate_data = np.array(validate_data)
-            validate_correct = np.array(validate_correct)
 
         print("Starting training...")
 
@@ -368,9 +355,6 @@ def main():
     if test_csv:
         print("Test csv provided. Classifying...")
         test_data, _ = csv_to_data(test_csv)
-        if USE_GPU:
-            print("Converting test array to GPU array")
-            test_data = np.array(test_data)
 
         prediction_list = []
         for i, data in enumerate(test_data):

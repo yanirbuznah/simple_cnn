@@ -18,6 +18,9 @@ class NeuralLayer(object):
         #self.clear_feeded_values()
 
     def feed(self, values: np.array):
+        if config.USE_GPU:
+            values = np.array(values)
+
         self.feeded_values += values
         # make sure that the bias still shut -1
         if self.bias:
@@ -58,21 +61,32 @@ class NeuralNetwork(object):
         return np.exp(x)/sum(np.exp(x))
 
     def train_sample(self, input_values: np.array, correct_output: np.array):
+        if config.USE_GPU:
+            correct_output = np.array(correct_output)
+
         errors = []
         self._clear_feeded_values()
         self.feed_forward(input_values)
-        current_errors = self.calculate_errors(correct_output)
+        current_errors = self._calculate_errors(correct_output)
         if not errors:
             errors = current_errors
         else:
             errors = [sum(l) for l in zip(errors, current_errors)]
 
-        self.update_weights(errors)
+        self._update_weights(errors)
 
-        return errors[0]
+        ret = errors[0]
+
+        if config.USE_GPU:
+            ret = np.asnumpy(ret)
+
+        return ret
 
     @timeit
     def feed_forward(self, input_values: np.array):
+        if config.USE_GPU:
+            input_values = np.array(input_values)
+
         self._clear_feeded_values()
 
         # Append one zero for bias neuron
@@ -91,7 +105,7 @@ class NeuralNetwork(object):
         self.weights = weights
 
     @timeit
-    def calculate_errors(self, correct_output: np.array):
+    def _calculate_errors(self, correct_output: np.array):
         errors = []
         prev_layer_error = correct_output - self.output_layer.feeded_values
         errors.insert(0, prev_layer_error)
@@ -103,7 +117,7 @@ class NeuralNetwork(object):
         return errors
 
     @timeit
-    def update_weights(self, errors: List[np.array]):
+    def _update_weights(self, errors: List[np.array]):
         for layer in self.layers[:-1][::-1]:
             self.weights[layer.index] = self.weights[layer.index] + self.lr * np.outer(self.activation_function.f(layer.feeded_values), errors[layer.index + 1])
 

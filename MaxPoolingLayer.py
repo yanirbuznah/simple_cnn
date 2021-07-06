@@ -1,17 +1,9 @@
 import skimage.measure as measure
 from numba import njit, prange
 
-import blockwise_view
-
-import numpy
 import numpy as np
 
-import config
 from common import timeit
-
-if config.USE_GPU:
-    import cupy as np
-    import cucim.skimage.measure as measure
 
 
 class MaxPoolingLayer(object):

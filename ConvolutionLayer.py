@@ -7,9 +7,6 @@ from common import ActivationFunction, timeit
 import numpy as np
 from numba import njit
 
-if config.USE_GPU:
-    import cupy as np
-    from cupyx.scipy import ndimage
 
 class ConvolutionLayer(object):
     def __init__(self, shape, index: int, with_bias, next_weights):

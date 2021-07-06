@@ -9,8 +9,6 @@ from MaxPoolingLayer import MaxPoolingLayer
 
 import numpy as np
 
-if config.USE_GPU:
-    import cupy as np
 
 class CNN(object):
     def __init__(self, first_layers_shapes: Tuple, fully_connected_feature_map_dim, learning_rate=0.001, randrange=0.01):
