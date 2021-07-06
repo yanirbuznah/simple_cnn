@@ -193,7 +193,7 @@ def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mi
 
     for sample, expected_results in data_sets:
         count += 1
-        if count % 10 == 0:
+        if count % 5 == 0:
             print('\r', end='')
             print(f"{count}/{len(data_sets)}", end='')
             sys.stdout.flush()

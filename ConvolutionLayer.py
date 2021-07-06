@@ -1,9 +1,11 @@
+from numba import prange
 from scipy import ndimage
 
 import config
 from common import ActivationFunction, timeit
 
 import numpy as np
+from numba import njit
 
 if config.USE_GPU:
     import cupy as np
@@ -49,14 +51,16 @@ class ConvolutionLayer(object):
 
         return result
 
-    @timeit
-    def update_weights(self, prev_error, lr):
-        for i in range(self.output_shape[0]):
-            x = np.pad(prev_error[i], ((1, 1), (1, 1)), mode='constant')
-            for j in range(self.input_shape[0]):
+    @staticmethod
+    @njit(parallel=True)
+    def _calculate_weight_delta(padded_errors, prev_error, lr, weights, feeded_values):
+        result = np.zeros(weights.shape)
+        for i in prange(weights.shape[1]):
+            x = padded_errors[i]
+            for j in prange(weights.shape[0]):
                 deltas = np.zeros((3, 3))
-                w = self.next_weights[j][i]
-                values = ActivationFunction.ReLU.f(self.feeded_values[j])
+                w = weights[j][i]
+                values = np.maximum(0, feeded_values[j]) # ReLU
                 #values = self.feeded_values[j]
                 deltas[0][0] += np.sum(values * x[:-2, :-2])  # bottom right
                 deltas[0][1] += np.sum(values * x[:-2, 1:-1])  # bottom
@@ -71,7 +75,21 @@ class ConvolutionLayer(object):
                 deltas[2][2] += np.sum(values * x[2:, 2:])
 
                 deltas *= lr
-                w += deltas
+                result[j][i] += deltas
+
+        return result
+
+    @timeit
+    def update_weights(self, prev_error, lr):
+        padded_errors = []
+        for i in range(self.output_shape[0]):
+            padded_errors.append(np.pad(prev_error[i], ((1, 1), (1, 1)), mode='constant'))
+
+        deltas = self._calculate_weight_delta(np.array(padded_errors), prev_error, lr, self.next_weights, self.feeded_values)
+
+        for i in range(self.input_shape[0]):
+            for j in range(self.output_shape[0]):
+                self.next_weights[i][j] += deltas[i, j]
 
     def _rotate_180(self, mat: np.array):
         ret = np.copy(mat)

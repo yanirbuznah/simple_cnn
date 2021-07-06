@@ -1,4 +1,5 @@
 import skimage.measure as measure
+from numba import njit, prange
 
 import blockwise_view
 
@@ -50,16 +51,31 @@ class MaxPoolingLayer(object):
                 .swapaxes(1, 2)
                 .reshape(-1, nrows, ncols))
 
+    @staticmethod
+    @njit(parallel=True)
+    def _calculate_errors(result, prev_layer_error, feeded_values):
+        for feature_map_index, feature_map in enumerate(feeded_values):
+            for i in prange(prev_layer_error[feature_map_index].shape[0]):
+                for j in prange(prev_layer_error[feature_map_index].shape[1]):
+                    pool = feature_map[i * 2:i * 2 + 2, j * 2:j * 2 + 2]
+
+                    # unravel_index is not supported with numba, so we implement it inline
+                    max_unraveled = pool.argmax()
+                    if max_unraveled == 0:
+                        max_i, max_j = 0, 0
+                    elif max_unraveled == 1:
+                        max_i, max_j = 0, 1
+                    elif max_unraveled == 2:
+                        max_i, max_j = 1, 0
+                    elif max_unraveled == 3:
+                        max_i, max_j = 1, 1
+
+                    result[feature_map_index][i * 2 + max_i][j * 2 + max_j] += prev_layer_error[feature_map_index][i][j]
+
     @timeit
     def calculate_errors(self, prev_layer_error: np.array):
         result = np.zeros(self.input_shape)
-        for feature_map_index, feature_map in enumerate(self.feeded_values):
-            for i in range(prev_layer_error[feature_map_index].shape[0]):
-                for j in range(prev_layer_error[feature_map_index].shape[1]):
-                    pool = np.array(feature_map[i * 2:i * 2 + 2, j * 2:j * 2 + 2])
-                    max_i, max_j = np.unravel_index(pool.argmax(), pool.shape)
-                    result[feature_map_index][i * 2 + max_i][j * 2 + max_j] += prev_layer_error[feature_map_index][i][j]
-
+        self._calculate_errors(result, prev_layer_error, self.feeded_values)
         return result
 
     def _do_max_pooling(self):
