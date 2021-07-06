@@ -67,6 +67,7 @@ def csv_to_data(path, count=-1) -> Tuple[np.array, np.array]:
 
 
 def save_state(path: Path, prefix, state: EpochStateData):
+    return
     if USE_GPU:
         print("Run was with GPU. Converting state back to numpy before saving")
         weights = [cupy.asnumpy(w) for w in state.weights]
