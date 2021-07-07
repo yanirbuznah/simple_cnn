@@ -49,6 +49,7 @@ class MaxPoolingLayer(object):
     @timeit
     def calculate_errors(self, prev_layer_error: np.array):
         result = np.zeros(self.input_shape)
+        self._calculate_errors(result, prev_layer_error, self.max_indexes)
         return result
 
     @staticmethod
