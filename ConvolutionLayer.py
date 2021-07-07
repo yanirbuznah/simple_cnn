@@ -57,7 +57,7 @@ class ConvolutionLayer(object):
             x = prev_layer_error[i]
             for j in range(self.input_shape[0]):
                 result[j] += ActivationFunction.ReLU.d(self.feeded_values[j]) * ndimage.convolve(x, self.next_weights[j][i], mode="constant")
-
+        self.rotate(self.next_weights)
         return result
 
     @staticmethod
