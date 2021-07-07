@@ -72,12 +72,17 @@ class ConvolutionLayer(object):
                 deltas *= lr
                 w += deltas
 
+    @staticmethod
+    @njit
+    def _generate_padded_errors(padded_errors, prev_error):
+        count, orig_w, orig_h = padded_errors.shape
+        for i in prange(count):
+            padded_errors[i, 1:orig_w - 1, 1:orig_h - 1] = prev_error[i]
+
     @timeit
     def update_weights(self, prev_error, lr):
-        padded_errors = []
-        for i in range(self.output_shape[0]):
-            padded_errors.append(np.pad(prev_error[i], ((1, 1), (1, 1)), mode='constant'))
-
+        padded_errors = np.zeros((prev_error.shape[0], prev_error.shape[1] + 2, prev_error.shape[2] + 2))
+        self._generate_padded_errors(padded_errors, prev_error)
         self._apply_weight_delta(np.array(padded_errors), prev_error, lr, self.next_weights, self.feeded_values)
 
     def _rotate_180(self, mat: np.array):
