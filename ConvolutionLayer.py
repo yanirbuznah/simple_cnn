@@ -19,7 +19,6 @@ class ConvolutionLayer(object):
             self.size += 1
         self.clear_feeded_values()
 
-    @timeit
     def feed(self, values: np.array):
         self.feeded_values += values
         # make sure that the bias still shut -1
@@ -39,7 +38,7 @@ class ConvolutionLayer(object):
         if self.bias:
             self.feeded_values[-1] = -1
 
-    @timeit
+
     def calculate_errors(self, prev_layer_error: np.array):
         result = np.zeros(self.input_shape)
         for i in range(self.output_shape[0]):
@@ -50,8 +49,7 @@ class ConvolutionLayer(object):
 
     @staticmethod
     @njit(parallel=True)
-    def _calculate_weight_delta(padded_errors, prev_error, lr, weights, feeded_values):
-        result = np.zeros(weights.shape)
+    def _apply_weight_delta(padded_errors, prev_error, lr, weights, feeded_values):
         for i in prange(weights.shape[1]):
             x = padded_errors[i]
             for j in prange(weights.shape[0]):
@@ -72,9 +70,7 @@ class ConvolutionLayer(object):
                 deltas[2][2] += np.sum(values * x[2:, 2:])
 
                 deltas *= lr
-                result[j][i] += deltas
-
-        return result
+                w += deltas
 
     @timeit
     def update_weights(self, prev_error, lr):
@@ -82,11 +78,7 @@ class ConvolutionLayer(object):
         for i in range(self.output_shape[0]):
             padded_errors.append(np.pad(prev_error[i], ((1, 1), (1, 1)), mode='constant'))
 
-        deltas = self._calculate_weight_delta(np.array(padded_errors), prev_error, lr, self.next_weights, self.feeded_values)
-
-        for i in range(self.input_shape[0]):
-            for j in range(self.output_shape[0]):
-                self.next_weights[i][j] += deltas[i, j]
+        self._apply_weight_delta(np.array(padded_errors), prev_error, lr, self.next_weights, self.feeded_values)
 
     def _rotate_180(self, mat: np.array):
         ret = np.copy(mat)
