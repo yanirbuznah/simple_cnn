@@ -69,18 +69,11 @@ def csv_to_data(path, count=-1) -> Tuple[np.array, np.array]:
 
 
 def save_state(path: Path, prefix, state: EpochStateData):
-    return
-    if USE_GPU:
-        print("Run was with GPU. Converting state back to numpy before saving")
-        weights = [cupy.asnumpy(w) for w in state.weights]
-        state = EpochStateData(state.validate_accuracy, state.train_accuracy, state.epoch, weights)
-
     with open(path / f"{prefix}epoch={state.epoch}_train{state.train_accuracy}%_validate{state.validate_accuracy}% .model", 'wb') as f:
         pickle.dump(state, f)
 
 
 def load_state(path: Path, net: CNN):
-    raise NotImplementedError()
     pickle_model_file = glob(f"{path}/*.model")
     if len(pickle_model_file) != 1:
         raise Exception("Expected only one pickle model file to be found")
@@ -89,12 +82,7 @@ def load_state(path: Path, net: CNN):
         state: EpochStateData = pickle.load(f)
         print(f"Loaded state: {state}")
 
-        if USE_GPU:
-            print("Run should be with GPU. Converting state to cupy before loading")
-            weights = [cupy.array(w) for w in state.weights]
-            state.weights = weights
-
-        net.set_weights(state.weights)
+        net.set_weights(state.cnn_weights, state.fc_weights)
 
     seed_file = glob(f"{path}/seed")
     if len(seed_file) != 1:
@@ -306,7 +294,7 @@ def main():
 
             if (TAKE_BEST_FROM_VALIDATE or TAKE_BEST_FROM_TRAIN) and (overall_best_state.validate_accuracy > 45):
                 print("Take best from:", overall_best_state)
-                net.weights = EpochStateData.deep_copy_list_of_np_arrays(overall_best_state.weights)
+                net.set_weights(EpochStateData.deep_copy_list_of_np_arrays(overall_best_state.cnn_weights), EpochStateData.deep_copy_list_of_np_arrays(overall_best_state.fc_weights))
 
 
             if SUBSET_SIZE > 0:
@@ -386,7 +374,7 @@ def main():
 
 
         prediction_list = []
-        net.set_weights(overall_best_state.weights)
+        net.set_weights(overall_best_state.cnn_weights, overall_best_state.fc_weights)
         for i, data in enumerate(test_data):
             classification = net.classify_sample(data) + 1
             prediction_list.append(classification)
