@@ -11,15 +11,16 @@ import numpy as np
 
 
 class CNN(object):
-    def __init__(self, first_layers_shapes: Tuple, fully_connected_feature_map_dim, learning_rate=0.001, randrange=0.01):
-        self.randrange = randrange
+    def __init__(self, first_layers_shapes: Tuple, fully_connected_feature_map_dim, learning_rate=0.001,
+                 cnn_randrange=0.05, fully_connected_randrange=0.035):
+        self.randrange = cnn_randrange
 
         self.init_layers(first_layers_shapes, fully_connected_feature_map_dim)
         self.input_layer = self.layers[0]
         self.output_layer = self.layers[-1]
 
         output_size = numpy.prod(self.output_layer.output_shape)
-        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(int(output_size), config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION, learning_rate, randrange)
+        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(int(output_size), config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION, learning_rate, fully_connected_randrange)
 
 
     # self.weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]
