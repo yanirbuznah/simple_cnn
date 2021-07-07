@@ -69,8 +69,7 @@ class ConvolutionLayer(object):
                 deltas[2][1] += np.sum(values * x[2:, 1:-1])  # top
                 deltas[2][2] += np.sum(values * x[2:, 2:])
 
-                deltas *= lr
-                w += deltas
+                w += deltas*lr
 
     @timeit
     def update_weights(self, prev_error, lr):
