@@ -42,12 +42,14 @@ set_seed(SEED)
 def result_classifications_to_np_layers(results_classifications: List[int]) -> np.array:
     results = numpy.zeros((len(results_classifications), 10))
     for i in range(len(results_classifications)):
-        if not str(results_classifications[i]).isdigit():
+        try:
+            result_index = int(results_classifications[i])
+        except ValueError:
             # This is probably a test set. Ignore expected results column
             results = []
             break
 
-        results[i][results_classifications[i] - 1] = 1
+        results[i][result_index - 1] = 1
 
     return results
 
