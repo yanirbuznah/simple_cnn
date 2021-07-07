@@ -21,13 +21,19 @@ class CNN(object):
         self.output_layer = self.layers[-1]
 
         output_size = numpy.prod(self.output_layer.output_shape)
-        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(output_size, config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION)
+        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(output_size, config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION,randrange=config.FC_RANDRANGE)
 
 
     # self.weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]
 
         #        self.activation_function = activation_function
         self.lr = learning_rate
+
+    def _to_1(self,weights):
+        for i in range(weights.shape[0]):
+            for j in range(weights.shape[1]):
+                weights[i][j][8] = 0
+                weights[i][j][8] = 1- np.sum(weights[i][j])
 
     @property
     def weights(self):
@@ -37,14 +43,15 @@ class CNN(object):
     def init_layers(self, layers_shapes):
         count, size, _ = layers_shapes[1]
         self.layers = []
-        weights = np.random.uniform(self.randrange, -self.randrange, (layers_shapes[0][0], count, 3, 3))
-
+        weights = np.random.uniform(self.randrange, -self.randrange, (layers_shapes[0][0], count, 9))
+        self._to_1(weights)
         self.layers.append(ConvolutionLayer(layers_shapes[0], 0, False, next_weights=weights))
         self.layers.append(MaxPoolingLayer(layers_shapes[1], 1, False, prev_weights=weights))
         index = 2
         size //= 2
         while size > 4:
             weights = np.random.uniform(1, -1, (count, count * 2, 3, 3))
+            self._to_1(weights)
             self.layers.append(ConvolutionLayer((count, size, size), index, False, next_weights=weights))
             count *= 2
             index += 1
