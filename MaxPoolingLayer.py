@@ -31,7 +31,9 @@ class MaxPoolingLayer(object):
         if self.bias:
             self.feeded_values[-1] = -1
 
-        self.outputed_values += self._do_max_pooling()
+        result = np.zeros(self.output_shape)
+        self._do_max_pooling(result, self.feeded_values)
+        self.outputed_values += result
         return self.outputed_values
 
     @staticmethod
@@ -70,9 +72,48 @@ class MaxPoolingLayer(object):
         self._calculate_errors(result, prev_layer_error, self.feeded_values)
         return result
 
-    def _do_max_pooling(self):
+    def _do_max_pooling_a(self):
         result = np.zeros(self.output_shape)
         for i in range(self.feeded_values.shape[0]):
             result[i] += measure.block_reduce(self.feeded_values[i], (2, 2), np.max)
 
         return result
+
+    @staticmethod
+    @njit
+    def _do_max_pooling(result, feeded_values):
+        C = feeded_values.shape[0]
+
+        output_dim = feeded_values.shape[1] // 2
+
+        for c in prange(C):
+            for h in prange(output_dim):
+                for w in prange(output_dim):
+                    h_start = h * 2
+                    h_end = h_start + 2
+                    w_start = w * 2
+                    w_end = w_start + 2
+
+                    result[c, h, w] = np.max(feeded_values[c, h_start:h_end, w_start:w_end])
+
+                    scalar_ind = np.argmax(feeded_values[c, h_start:h_end, w_start:w_end])
+                    # ind is in (row_ind, col_ind) format
+
+                    # unravel_index is not supported with numba, so we implement it inline
+                    if scalar_ind == 0:
+                        max_i, max_j = 0, 0
+                    elif scalar_ind == 1:
+                        max_i, max_j = 0, 1
+                    elif scalar_ind == 2:
+                        max_i, max_j = 1, 0
+                    elif scalar_ind == 3:
+                        max_i, max_j = 1, 1
+
+                    # real index of maximum element in the local region
+                    real_ind = (max_i + h_start, max_j + w_start)
+
+                    # store this real index in two part
+                    #self.max_index[n, c, 0, h, w] = real_ind[0]
+                    #self.max_index[n, c, 1, h, w] = real_ind[1]
+        return result
+

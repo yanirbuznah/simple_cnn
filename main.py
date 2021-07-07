@@ -193,7 +193,7 @@ def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mi
         count += 1
         if count % 5 == 0:
             print('\r', end='')
-            print(f"{count}/{len(data_sets)}", end='')
+            print(f"Training Progress: {count}/{len(data_sets)}", end='')
             sys.stdout.flush()
 
         net.train_sample(sample, expected_results)
@@ -206,12 +206,22 @@ def validate_set(net, data_sets: List[Tuple[np.array, np.array]]):
     correct = 0
     total = 0
     certainty = 0
+
+    count = 0
     for index, (sample, expected_result) in enumerate(data_sets):
+        count += 1
+        if count % 5 == 0:
+            print('\r', end='')
+            print(f"Classifying Progress: {count}/{len(data_sets)}", end='')
+            sys.stdout.flush()
+
         result, i = net.validate_sample(sample, expected_result)
         certainty += i
         if result:
             correct += 1
         total += 1
+
+    print("\rFinished classifying")
 
     average_certainty = float(certainty / total)
     print(f"Average Certainty: {average_certainty}")
