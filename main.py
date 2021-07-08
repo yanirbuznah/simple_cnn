@@ -190,27 +190,30 @@ def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mi
     if shuffle:
         numpy.random.shuffle(data_sets)
 
-    count = 0
-
+    count = 1
+    average = 0
+    # first for the compile (took a lot of time and ruined the average)
+    net.train_sample(data_sets[0][0], data_sets[0][1])
     times = []
     print(f"|{'Training Progress':^25}|{'Average Time Per Sample':^25}|{'Estimated left':^25}|")
-    for sample, expected_results in data_sets:
+    for sample, expected_results in data_sets[1:]:
         count += 1
         if count % 5 == 0:
             print('\r', end='')
-            average = np.average(times)
+            #average = np.average(times)
             print(f"|{f'{count}/{len(data_sets)}':^25}|{f'{average :.2f}ms':^25}|{f'{timedelta(milliseconds=average * (len(data_sets) - count))}':^25}|", end='')
             sys.stdout.flush()
 
         ts = time.time()
         net.train_sample(sample, expected_results)
         te = time.time()
-        times.append((te - ts) * 1000)
-        if len(times) > 50:
-            times = times[1:]
+        new_time = (te - ts) * 1000
+        average += (new_time-average)/count
+        #if len(times) > 50:
+        #     times = times[1:]
 
 
-    print("\rFinished training")
+    print("")
     sys.stdout.flush()
 
 
