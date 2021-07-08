@@ -1,4 +1,5 @@
 import csv
+import os
 import pprint
 import random
 import shutil
@@ -90,6 +91,8 @@ def load_state(path: Path, net: CNN):
     if len(seed_file) != 1:
         raise Exception("Seed file wasn't found")
 
+    seed_file = seed_file[0]
+
     with open(seed_file, 'r') as f:
         seed = int(f.read())
         set_seed(seed)
@@ -140,7 +143,7 @@ def shuffle(train_data, train_correct, validate_data, validate_correct):
 
 def save_predictions(path, prediction_list):
     with open(path, 'w') as f:
-        f.writelines([str(p) for p in prediction_list])
+        f.write("\n".join([str(p) for p in prediction_list]))
 
 
 def interrupt_handler(sig, frame):
@@ -233,6 +236,8 @@ def validate_set(net, data_sets: List[Tuple[np.array, np.array]]):
     return correction, average_certainty
 
 
+DEBUG_CSV_TO_DATA_LIMIT = -1  # USE -1 FOR NO LIMIT
+
 
 def main():
     if len(sys.argv) < 3:
@@ -267,20 +272,20 @@ def main():
 
     if test_csv:
         print("Test csv provided")
-        test_data, _ = csv_to_data(test_csv)
+        test_data, _ = csv_to_data(test_csv, DEBUG_CSV_TO_DATA_LIMIT)
 
     if SHOULD_TRAIN:
         output_path.mkdir(exist_ok=True)
         shutil.copy2("config.py", output_path)
         open(output_path / "seed", "w").write(str(SEED))
 
-        validate_data, validate_correct = csv_to_data(validate_csv)
+        validate_data, validate_correct = csv_to_data(validate_csv, DEBUG_CSV_TO_DATA_LIMIT)
 
         signal.signal(signal.SIGINT, interrupt_handler)
 
         print(f"Reading training data from: {train_csv}")
 
-        train_data, train_correct = csv_to_data(train_csv)
+        train_data, train_correct = csv_to_data(train_csv, DEBUG_CSV_TO_DATA_LIMIT)
 
         if SHOULD_SHUFFLE:
             train_data,train_correct,validate_data,validate_correct = shuffle(train_data,train_correct,validate_data,validate_correct)
@@ -340,7 +345,6 @@ def main():
 
             if TAKE_BEST_FROM_TRAIN and TAKE_BEST_FROM_VALIDATE:
                 if current_validate_accuracy + current_train_accuracy > overall_best_state.train_accuracy + overall_best_state.validate_accuracy:
-                    #if current_validate_accuracy >= overall_best_state.validate_accuracy and current_train_accuracy + 2.0 > overall_best_state.train_accuracy:
                     overall_best_state = EpochStateData(current_validate_accuracy, current_train_accuracy, epoch, net.weights)
             elif TAKE_BEST_FROM_TRAIN:
                 if current_train_accuracy > overall_best_state.train_accuracy:
@@ -368,7 +372,7 @@ def main():
 
     if test_csv:
         print("Test csv provided. Classifying...")
-        test_data, _ = csv_to_data(test_csv)
+        test_data, _ = csv_to_data(test_csv, DEBUG_CSV_TO_DATA_LIMIT)
 
         prediction_list = []
         for i, data in enumerate(test_data):
@@ -392,9 +396,8 @@ def main():
             classification = net.classify_sample(data) + 1
             prediction_list.append(classification)
 
-        print("Saving predicted best_test.txt")
-
-        save_predictions("best_test.txt", prediction_list)
+        print("Saving predicted output.txt")
+        save_predictions(f"{os.path.join(output_path, 'output.txt')}", prediction_list)
 
         print(prediction_list)
         print(output_path)
