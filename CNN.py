@@ -27,7 +27,6 @@ class CNN(object):
         count, size, _ = layers_shapes[1]
         self.layers = []
         weights = np.random.uniform(self.randrange, -self.randrange, (layers_shapes[0][0], count, 3, 3))
-
         self.layers.append(ConvolutionLayer(layers_shapes[0], 0, False, next_weights=weights))
         self.layers.append(MaxPoolingLayer(layers_shapes[1], 1, False, prev_weights=weights))
         index = 2

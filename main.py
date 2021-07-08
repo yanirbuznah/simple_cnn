@@ -6,7 +6,9 @@ import signal
 import smtplib
 import ssl
 import sys
+import time
 import uuid
+from datetime import timedelta
 from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Tuple, List
@@ -172,23 +174,34 @@ def _chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
-
 def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mini_batch_size=1):
     if shuffle:
         numpy.random.shuffle(data_sets)
 
-    count = 0
-
-    for sample, expected_results in data_sets:
+    count = 1
+    average = 0
+    # first for the compile (took a lot of time and ruined the average)
+    net.train_sample(data_sets[0][0], data_sets[0][1])
+    times = []
+    print(f"|{'Training Progress':^25}|{'Average Time Per Sample':^25}|{'Estimated left':^25}|")
+    for sample, expected_results in data_sets[1:]:
         count += 1
         if count % 5 == 0:
             print('\r', end='')
-            print(f"Training Progress: {count}/{len(data_sets)}", end='')
+            #average = np.average(times)
+            print(f"|{f'{count}/{len(data_sets)}':^25}|{f'{average :.2f}ms':^25}|{f'{timedelta(milliseconds=average * (len(data_sets) - count))}':^25}|", end='')
             sys.stdout.flush()
 
+        ts = time.time()
         net.train_sample(sample, expected_results)
+        te = time.time()
+        new_time = (te - ts) * 1000
+        average += (new_time-average)/count
+        #if len(times) > 50:
+        #     times = times[1:]
 
-    print("\rFinished training")
+
+    print("")
     sys.stdout.flush()
 
 
@@ -211,10 +224,10 @@ def validate_set(net, data_sets: List[Tuple[np.array, np.array]]):
             correct += 1
         total += 1
 
-    print("\rFinished classifying")
+    # print("\rFinished classifying")
 
     average_certainty = float(certainty / total)
-    print(f"Average Certainty: {average_certainty}")
+    print(f"\rAverage Certainty: {average_certainty}")
     correction = float(correct / total) * 100.0
     print(f"Correct: {correction}%")
     return correction, average_certainty
