@@ -106,13 +106,13 @@ class NeuralNetwork(object):
     def weights(self):
         weights = self._weights
         if config.USE_GPU:
-            weights = np.asnumpy(weights)
+            weights = [np.asnumpy(w) for w in weights]
 
         return weights
 
     def set_weights(self, weights):
         if config.USE_GPU:
-            weights = np.array(weights)
+            weights = [np.array(w) for w in weights]
 
         self._weights = weights
 
