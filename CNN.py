@@ -56,6 +56,10 @@ class CNN(object):
         errors += self._calculate_errors(fully_connected_error)
         self._update_weights(errors)
 
+        prediction = np.argmax(self._fully_connected_net.output_layer.feeded_values)
+        correct = np.argmax(correct_output)
+        return correct == prediction
+
     def classify_sample(self, input_values: np.array):
         self._clear_feeded_values()
         flattened_out = self._feed_forward(input_values)

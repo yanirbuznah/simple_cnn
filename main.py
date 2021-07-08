@@ -182,22 +182,26 @@ def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mi
         numpy.random.shuffle(data_sets)
 
     count = 1
+    correct_count = 0
     average = 0
     # first for the compile (took a lot of time and ruined the average)
     net.train_sample(data_sets[0][0], data_sets[0][1])
     times = []
-    print(f"|{'Training Progress':^25}|{'Average Time Per Sample':^25}|{'Estimated left':^25}|")
+    print(f"|{'Training Progress':^25}|{'Average Accuracy':^25}|{'Average MS/Sample':^25}|{'Estimated Left':^25}|")
     for sample, expected_results in data_sets[1:]:
         count += 1
         if count % 5 == 0:
             print('\r', end='')
-            #average = np.average(times)
-            print(f"|{f'{count}/{len(data_sets)}':^25}|{f'{average :.2f}ms':^25}|{f'{timedelta(milliseconds=average * (len(data_sets) - count))}':^25}|", end='')
+            print(f"|{f'{count}/{len(data_sets)}':^25}|{f'{correct_count / count * 100 :.2f}%':^25}|{f'{average :.2f}ms':^25}|{f'{timedelta(milliseconds=average * (len(data_sets) - count))}':^25}|", end='')
             sys.stdout.flush()
 
         ts = time.time()
-        net.train_sample(sample, expected_results)
+        was_correct = net.train_sample(sample, expected_results)
         te = time.time()
+
+        if was_correct:
+            correct_count += 1
+
         new_time = (te - ts) * 1000
         average += (new_time-average)/count
         #if len(times) > 50:
