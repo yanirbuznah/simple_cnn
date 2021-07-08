@@ -33,26 +33,16 @@ class CNN(object):
         print("TODO: FIX IT")
         return np.zeros((1,1))
 
-    def _complete_to_one(self,weights):
-        for i in range(weights.shape[0]):
-            for j in range(weights.shape[1]):
-                x,y = np.random.randint(3,size=2)
-                weights[i][j][x][y]=0
-                weights[i][j][x][y] = 1- np.sum(np.sum(weights[i][j]))
-
-
     def init_layers(self, layers_shapes, fully_connected_feature_map_dim):
         count, size, _ = layers_shapes[1]
         self.layers = []
         weights = np.random.uniform(self.randrange, -self.randrange, (layers_shapes[0][0], count, 3, 3))
-        self._complete_to_one(weights)
         self.layers.append(ConvolutionLayer(layers_shapes[0], 0, False, next_weights=weights))
         self.layers.append(MaxPoolingLayer(layers_shapes[1], 1, False, prev_weights=weights))
         index = 2
         size //= 2
         while size > fully_connected_feature_map_dim:
             weights = np.random.uniform(self.randrange, -self.randrange, (count, count * 2, 3, 3))
-            self._complete_to_one(weights)
             self.layers.append(ConvolutionLayer((count, size, size), index, False, next_weights=weights))
             count *= 2
             index += 1

@@ -6,7 +6,9 @@ import signal
 import smtplib
 import ssl
 import sys
+import time
 import uuid
+from datetime import timedelta
 from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Tuple, List
@@ -184,21 +186,29 @@ def _chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
-
 def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mini_batch_size=1):
     if shuffle:
         numpy.random.shuffle(data_sets)
 
     count = 0
 
+    times = []
+
     for sample, expected_results in data_sets:
         count += 1
         if count % 5 == 0:
             print('\r', end='')
-            print(f"Training Progress: {count}/{len(data_sets)}", end='')
+            average = np.average(times)
+            print(f"Training Progress: {count}/{len(data_sets)}. Average Time Per Sample: {average :.2f}ms. Estimated left: {timedelta(milliseconds=average * (len(data_sets) - count))}", end='')
             sys.stdout.flush()
 
+        ts = time.time()
         net.train_sample(sample, expected_results)
+        te = time.time()
+        times.append((te - ts) * 1000)
+        if len(times) > 50:
+            times = times[1:]
+
 
     print("\rFinished training")
     sys.stdout.flush()

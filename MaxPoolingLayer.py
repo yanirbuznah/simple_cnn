@@ -20,6 +20,7 @@ class MaxPoolingLayer(object):
     def clear_feeded_values(self):
         self.feeded_values = np.zeros(self.input_shape)
         self.outputed_values = np.zeros(self.output_shape)
+        self.max_indexes = np.empty((self.input_shape[0], 2, self.output_shape[1], self.output_shape[2]), dtype=np.int16)
         # update the bias neuron to -1
         if self.bias:
             self.feeded_values[-1] = -1
@@ -32,56 +33,28 @@ class MaxPoolingLayer(object):
             self.feeded_values[-1] = -1
 
         result = np.zeros(self.output_shape)
-        self._do_max_pooling(result, self.feeded_values)
+        self._do_max_pooling(result, self.feeded_values, self.max_indexes)
         self.outputed_values += result
         return self.outputed_values
 
     @staticmethod
-    def split_matrix(array, nrows, ncols):
-        """Split a matrix into sub-matrices."""
-
-        r, h = array.shape
-        return (array.reshape(h // nrows, nrows, -1, ncols)
-                .swapaxes(1, 2)
-                .reshape(-1, nrows, ncols))
-
-    @staticmethod
     @njit(parallel=True)
-    def _calculate_errors(result, prev_layer_error, feeded_values):
-        for feature_map_index, feature_map in enumerate(feeded_values):
-            for i in prange(prev_layer_error[feature_map_index].shape[0]):
-                for j in prange(prev_layer_error[feature_map_index].shape[1]):
-                    pool = feature_map[i * 2:i * 2 + 2, j * 2:j * 2 + 2]
-
-                    # unravel_index is not supported with numba, so we implement it inline
-                    max_unraveled = pool.argmax()
-                    if max_unraveled == 0:
-                        max_i, max_j = 0, 0
-                    elif max_unraveled == 1:
-                        max_i, max_j = 0, 1
-                    elif max_unraveled == 2:
-                        max_i, max_j = 1, 0
-                    elif max_unraveled == 3:
-                        max_i, max_j = 1, 1
-
-                    result[feature_map_index][i * 2 + max_i][j * 2 + max_j] += prev_layer_error[feature_map_index][i][j]
+    def _calculate_errors(result, prev_layer_error, max_indexes):
+        C, H, W = prev_layer_error.shape
+        for c in prange(C):
+            for h in prange(H):
+                for w in prange(W):
+                    result[c][max_indexes[c, 0, h, w]][max_indexes[c, 1, h, w]] = prev_layer_error[c, h, w]
 
     @timeit
     def calculate_errors(self, prev_layer_error: np.array):
         result = np.zeros(self.input_shape)
-        self._calculate_errors(result, prev_layer_error, self.feeded_values)
-        return result
-
-    def _do_max_pooling_a(self):
-        result = np.zeros(self.output_shape)
-        for i in range(self.feeded_values.shape[0]):
-            result[i] += measure.block_reduce(self.feeded_values[i], (2, 2), np.max)
-
+        self._calculate_errors(result, prev_layer_error, self.max_indexes)
         return result
 
     @staticmethod
     @njit
-    def _do_max_pooling(result, feeded_values):
+    def _do_max_pooling(result, feeded_values, max_indexes):
         C = feeded_values.shape[0]
 
         output_dim = feeded_values.shape[1] // 2
@@ -113,7 +86,7 @@ class MaxPoolingLayer(object):
                     real_ind = (max_i + h_start, max_j + w_start)
 
                     # store this real index in two part
-                    #self.max_index[n, c, 0, h, w] = real_ind[0]
-                    #self.max_index[n, c, 1, h, w] = real_ind[1]
+                    max_indexes[c, 0, h, w] = real_ind[0]
+                    max_indexes[c, 1, h, w] = real_ind[1]
         return result
 
