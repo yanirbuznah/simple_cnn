@@ -193,13 +193,13 @@ def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mi
     count = 0
 
     times = []
-
+    print(f"|{'Training Progress':^25}|{'Average Time Per Sample':^25}|{'Estimated left':^25}|")
     for sample, expected_results in data_sets:
         count += 1
         if count % 5 == 0:
             print('\r', end='')
             average = np.average(times)
-            print(f"Training Progress: {count}/{len(data_sets)}. Average Time Per Sample: {average :.2f}ms. Estimated left: {timedelta(milliseconds=average * (len(data_sets) - count))}", end='')
+            print(f"|{f'{count}/{len(data_sets)}':^25}|{f'{average :.2f}ms':^25}|{f'{timedelta(milliseconds=average * (len(data_sets) - count))}':^25}|", end='')
             sys.stdout.flush()
 
         ts = time.time()
