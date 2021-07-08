@@ -23,10 +23,6 @@ import numpy as np
 
 import pickle
 
-if USE_GPU:
-    import cupy
-    import cupy as np
-
 SHOULD_STOP = False
 
 
@@ -35,6 +31,7 @@ def set_seed(value):
     numpy.random.seed(value)
 
     if USE_GPU:
+        import cupy
         cupy.random.seed(value)
 
 
@@ -45,12 +42,14 @@ set_seed(SEED)
 def result_classifications_to_np_layers(results_classifications: List[int]) -> np.array:
     results = numpy.zeros((len(results_classifications), 10))
     for i in range(len(results_classifications)):
-        if not str(results_classifications[i]).isdigit():
+        try:
+            result_index = int(results_classifications[i])
+        except ValueError:
             # This is probably a test set. Ignore expected results column
             results = []
             break
 
-        results[i][results_classifications[i] - 1] = 1
+        results[i][result_index - 1] = 1
 
     return results
 
@@ -70,6 +69,7 @@ def csv_to_data(path, count=-1) -> Tuple[np.array, np.array]:
 
 
 def save_state(path: Path, prefix, state: EpochStateData):
+    return
     if USE_GPU:
         print("Run was with GPU. Converting state back to numpy before saving")
         weights = [cupy.asnumpy(w) for w in state.weights]
@@ -193,9 +193,9 @@ def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mi
 
     for sample, expected_results in data_sets:
         count += 1
-        if count % 10 == 0:
+        if count % 5 == 0:
             print('\r', end='')
-            print(f"{count}/{len(data_sets)}", end='')
+            print(f"Training Progress: {count}/{len(data_sets)}", end='')
             sys.stdout.flush()
 
         net.train_sample(sample, expected_results)
@@ -208,12 +208,22 @@ def validate_set(net, data_sets: List[Tuple[np.array, np.array]]):
     correct = 0
     total = 0
     certainty = 0
+
+    count = 0
     for index, (sample, expected_result) in enumerate(data_sets):
+        count += 1
+        if count % 5 == 0:
+            print('\r', end='')
+            print(f"Classifying Progress: {count}/{len(data_sets)}", end='')
+            sys.stdout.flush()
+
         result, i = net.validate_sample(sample, expected_result)
         certainty += i
         if result:
             correct += 1
         total += 1
+
+    print("\rFinished classifying")
 
     average_certainty = float(certainty / total)
     print(f"Average Certainty: {average_certainty}")
@@ -239,7 +249,7 @@ def main():
     print(" ==========================")
 
     shape = ((3, 32, 32), (16, 32, 32))
-    net = CNN(shape, LEARNING_RATE, RANDRANGE)
+    net = CNN(shape, config.FULLY_CONNECTED_FEATURE_MAP_DIM, LEARNING_RATE, config.CNN_RANDRANGE, config.FULLY_CONNECTED_RANDRANGE)
     csv_results = [["epoch", "LR", "train_accuracy", "train_certainty", "validate_accuracy", "validate_certainty"]]
 
     #    if SEPARATE_VALIDATE:
@@ -257,9 +267,6 @@ def main():
     if test_csv:
         print("Test csv provided")
         test_data, _ = csv_to_data(test_csv)
-        if USE_GPU:
-            print("Converting test array to GPU array")
-            test_data = np.array(test_data)
 
     if SHOULD_TRAIN:
         output_path.mkdir(exist_ok=True)
@@ -276,13 +283,6 @@ def main():
 
         if SHOULD_SHUFFLE:
             train_data,train_correct,validate_data,validate_correct = shuffle(train_data,train_correct,validate_data,validate_correct)
-
-        if USE_GPU:
-            print("Converting arrays to GPU arrays")
-            train_data = np.array(train_data)
-            train_correct = np.array(train_correct)
-            validate_data = np.array(validate_data)
-            validate_correct = np.array(validate_correct)
 
         print("Starting training...")
 
@@ -368,9 +368,6 @@ def main():
     if test_csv:
         print("Test csv provided. Classifying...")
         test_data, _ = csv_to_data(test_csv)
-        if USE_GPU:
-            print("Converting test array to GPU array")
-            test_data = np.array(test_data)
 
         prediction_list = []
         for i, data in enumerate(test_data):

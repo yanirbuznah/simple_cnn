@@ -1,15 +1,9 @@
 import skimage.measure as measure
+from numba import njit, prange
 
-import blockwise_view
-
-import numpy
 import numpy as np
 
-import config
-
-if config.USE_GPU:
-    import cupy as np
-    import cucim.skimage.measure as measure
+from common import timeit
 
 
 class MaxPoolingLayer(object):
@@ -30,13 +24,16 @@ class MaxPoolingLayer(object):
         if self.bias:
             self.feeded_values[-1] = -1
 
+    @timeit
     def feed(self, values: np.array):
         self.feeded_values += values
         # make sure that the bias still shut -1
         if self.bias:
             self.feeded_values[-1] = -1
 
-        self.outputed_values += self._do_max_pooling()
+        result = np.zeros(self.output_shape)
+        self._do_max_pooling(result, self.feeded_values)
+        self.outputed_values += result
         return self.outputed_values
 
     @staticmethod
@@ -48,44 +45,75 @@ class MaxPoolingLayer(object):
                 .swapaxes(1, 2)
                 .reshape(-1, nrows, ncols))
 
-    def _calc_error_mask(self, feeded, outputed):
-        mask = np.equal(feeded, outputed.repeat(2, axis=0).repeat(2, axis=1)).astype(int)
+    @staticmethod
+    @njit(parallel=True)
+    def _calculate_errors(result, prev_layer_error, feeded_values):
+        for feature_map_index, feature_map in enumerate(feeded_values):
+            for i in prange(prev_layer_error[feature_map_index].shape[0]):
+                for j in prange(prev_layer_error[feature_map_index].shape[1]):
+                    pool = feature_map[i * 2:i * 2 + 2, j * 2:j * 2 + 2]
 
-        # if multiple neurons in the same group were the same value, choose one arbitrarily
-        split_mask = blockwise_view.blockwise_view(mask, (2, 2), aslist=False)
-        for i in range(split_mask.shape[0]):
-            for j in range(split_mask.shape[1]):
-                mask_item = split_mask[i][j]
-                s = mask_item.sum()
-                if s == 1:
-                    continue
+                    # unravel_index is not supported with numba, so we implement it inline
+                    max_unraveled = pool.argmax()
+                    if max_unraveled == 0:
+                        max_i, max_j = 0, 0
+                    elif max_unraveled == 1:
+                        max_i, max_j = 0, 1
+                    elif max_unraveled == 2:
+                        max_i, max_j = 1, 0
+                    elif max_unraveled == 3:
+                        max_i, max_j = 1, 1
 
-                # Choose a random neuron index in the mask item that will take the error
-                index = np.random.choice(np.nonzero(mask_item.reshape(4))[0], size=1)[0]  # Must give size for cupy
-                index = np.unravel_index(index, (2, 2))
-                mask_item.fill(0)
-                mask_item[index] = 1
+                    result[feature_map_index][i * 2 + max_i][j * 2 + max_j] += prev_layer_error[feature_map_index][i][j]
 
-        return mask
-
+    @timeit
     def calculate_errors(self, prev_layer_error: np.array):
         result = np.zeros(self.input_shape)
-        for i in range(self.feeded_values.shape[0]):
-            # Find which neurons caused the errors
-            mask = self._calc_error_mask(self.feeded_values[i], self.outputed_values[i])
-            errors = prev_layer_error[i].repeat(2, axis=0).repeat(2, axis=1) * mask
-            result[i] += errors
-
+        self._calculate_errors(result, prev_layer_error, self.feeded_values)
         return result
 
-    def _do_max_pooling(self):
+    def _do_max_pooling_a(self):
         result = np.zeros(self.output_shape)
         for i in range(self.feeded_values.shape[0]):
-            result[i] += measure.block_reduce(self.feeded_values[i], (2, 2), self._abs_max)
+            result[i] += measure.block_reduce(self.feeded_values[i], (2, 2), np.max)
 
         return result
 
-    def _abs_max(self, a, axis=None):
-        amax = a.max(axis)
-        amin = a.min(axis)
-        return np.where(-amin > amax, amin, amax)
+    @staticmethod
+    @njit
+    def _do_max_pooling(result, feeded_values):
+        C = feeded_values.shape[0]
+
+        output_dim = feeded_values.shape[1] // 2
+
+        for c in prange(C):
+            for h in prange(output_dim):
+                for w in prange(output_dim):
+                    h_start = h * 2
+                    h_end = h_start + 2
+                    w_start = w * 2
+                    w_end = w_start + 2
+
+                    result[c, h, w] = np.max(feeded_values[c, h_start:h_end, w_start:w_end])
+
+                    scalar_ind = np.argmax(feeded_values[c, h_start:h_end, w_start:w_end])
+                    # ind is in (row_ind, col_ind) format
+
+                    # unravel_index is not supported with numba, so we implement it inline
+                    if scalar_ind == 0:
+                        max_i, max_j = 0, 0
+                    elif scalar_ind == 1:
+                        max_i, max_j = 0, 1
+                    elif scalar_ind == 2:
+                        max_i, max_j = 1, 0
+                    elif scalar_ind == 3:
+                        max_i, max_j = 1, 1
+
+                    # real index of maximum element in the local region
+                    real_ind = (max_i + h_start, max_j + w_start)
+
+                    # store this real index in two part
+                    #self.max_index[n, c, 0, h, w] = real_ind[0]
+                    #self.max_index[n, c, 1, h, w] = real_ind[1]
+        return result
+

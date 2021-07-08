@@ -1,13 +1,12 @@
+from numba import prange
 from scipy import ndimage
 
 import config
-from common import ActivationFunction
+from common import ActivationFunction, timeit
 
 import numpy as np
+from numba import njit
 
-if config.USE_GPU:
-    import cupy as np
-    from cupyx.scipy import ndimage
 
 class ConvolutionLayer(object):
     def __init__(self, shape, index: int, with_bias, next_weights):
@@ -26,7 +25,12 @@ class ConvolutionLayer(object):
         if self.bias:
             self.feeded_values[-1] = -1
 
-        return ActivationFunction.ReLU.f(self._do_convolution(self.feeded_values))
+        result = np.zeros(self.output_shape)
+        for i in range(self.output_shape[0]):
+            for j in range(self.input_shape[0]):
+                result[i] += ndimage.convolve(self.feeded_values[j], self.next_weights[j][i], mode="constant")
+
+        return ActivationFunction.ReLU.f(result)
 
     def clear_feeded_values(self):
         self.feeded_values = np.zeros(self.input_shape)
@@ -34,25 +38,64 @@ class ConvolutionLayer(object):
         if self.bias:
             self.feeded_values[-1] = -1
 
+
     def calculate_errors(self, prev_layer_error: np.array):
-        return ActivationFunction.ReLU.d(self._do_convolution(prev_layer_error, forward=False))
-
-    def update_weights(self, error, lr):
+        result = np.zeros(self.input_shape)
+        self.rotate(self.next_weights)
         for i in range(self.output_shape[0]):
+            x = prev_layer_error[i]
             for j in range(self.input_shape[0]):
-                w = self.next_weights[j][i]
-                w[0][0] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((1,0),(1,0)), mode='constant')[:-1, :-1])  # bottom right
-                w[0][1] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((1,0),(0,0)), mode='constant')[:-1, :]) # bottom
-                w[0][2] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((1,0),(0,1)), mode='constant')[:-1, 1:])   # bottom left
+                result[j] += ActivationFunction.ReLU.d(self.feeded_values[j]) *ndimage.convolve(x,self.next_weights[j][i], mode="constant")
+        self.rotate(self.next_weights)
+        return result
 
-                w[1][0] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((0,0),(1,0)), mode='constant')[:, :-1]) # right
-                w[1][1] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * error[i]) # center
-                w[1][2] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((0,0),(0,1)), mode='constant')[:, 1:]) # left
 
-                w[2][0] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((0,1),(1,0)), mode='constant')[1:, :-1])   # top right
-                w[2][1] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((0,1),(0,0)), mode='constant')[1:, :]) # top
-                w[2][2] += lr * np.sum(ActivationFunction.ReLU.d(self.feeded_values[j]) * np.pad(error[i],((0,1),(0,1)), mode='constant')[1:, 1:])   # top left
+    @staticmethod
+    @njit(parallel=True)
+    def rotate(weights):
+        for i in prange(weights.shape[0]):
+            for j in prange(weights.shape[1]):
+                weights[i][j][0][0], weights[i][j][2][2] = weights[i][j][2][2], weights[i][j][0][0]
+                weights[i][j][0][1], weights[i][j][2][1] = weights[i][j][2][1], weights[i][j][0][1]
+                weights[i][j][2][0], weights[i][j][0][2] = weights[i][j][0][2], weights[i][j][2][0]
+                weights[i][j][1][0], weights[i][j][1][2] = weights[i][j][1][2], weights[i][j][1][0]
 
+
+
+    @staticmethod
+    @njit(parallel=True)
+    def _apply_weight_delta(padded_errors, prev_error, lr, weights, feeded_values):
+        for i in prange(weights.shape[1]):
+            x = padded_errors[i]
+            for j in prange(weights.shape[0]):
+                deltas = np.zeros((3, 3))
+                w = weights[j][i]
+                values = np.maximum(0, feeded_values[j]) # ReLU
+                #values = self.feeded_values[j]
+                deltas[0][0] += np.sum(values * x[:-2, :-2])  # bottom right
+                deltas[0][1] += np.sum(values * x[:-2, 1:-1])  # bottom
+                deltas[0][2] += np.sum(values * x[:-2, 2:])  # bottom left
+
+                deltas[1][0] += np.sum(values * x[1:-1, :-2])  # right
+                deltas[1][1] += np.sum(values * prev_error[i])  # center
+                deltas[1][2] += np.sum(values * x[1:-1, 2:])  # left
+
+                deltas[2][0] += np.sum(values * x[2:, :-2])  # top right
+                deltas[2][1] += np.sum(values * x[2:, 1:-1])  # top
+                deltas[2][2] += np.sum(values * x[2:, 2:])
+
+                w += deltas*lr
+
+    @timeit
+    def update_weights(self, prev_error, lr):
+        padded_errors = []
+        for i in range(self.output_shape[0]):
+            padded_errors.append(np.pad(prev_error[i], ((1, 1), (1, 1)), mode='constant'))
+
+        self._apply_weight_delta(np.array(padded_errors), prev_error, lr, self.next_weights, self.feeded_values)
+
+
+    #TODO: REMOVE
     def _rotate_180(self, mat: np.array):
         ret = np.copy(mat)
         ret[0][0], ret[2][2] = ret[2][2], ret[0][0]
@@ -62,14 +105,9 @@ class ConvolutionLayer(object):
 
         return ret
 
-    def _do_convolution(self, input_values, forward=True):
-        result = np.zeros(self.output_shape)
-        for i in range(self.output_shape[0]):
-            for j in range(self.input_shape[0]):
-                kernel = self.next_weights[j][i] if forward else self._rotate_180(self.next_weights[j][i])
-                result[i] += ndimage.convolve(input_values[j], kernel, mode="constant", cval=0.0)
-
-        return result
+    #TODO: REMOVE
+    def _do_convolution(self, input_values, kernel, forward=True):
+        return ndimage.convolve(input_values, kernel, mode="constant", cval=0.0)
 
     def __repr__(self):
         return self.feeded_values.__repr__()

@@ -9,19 +9,18 @@ from MaxPoolingLayer import MaxPoolingLayer
 
 import numpy as np
 
-if config.USE_GPU:
-    import cupy as np
 
 class CNN(object):
-    def __init__(self, layers_shapes: Tuple, learning_rate=0.001, randrange=0.01):
-        self.randrange = randrange
+    def __init__(self, first_layers_shapes: Tuple, fully_connected_feature_map_dim, learning_rate=0.001,
+                 cnn_randrange=0.05, fully_connected_randrange=0.035):
+        self.randrange = cnn_randrange
 
-        self.init_layers(layers_shapes)
+        self.init_layers(first_layers_shapes, fully_connected_feature_map_dim)
         self.input_layer = self.layers[0]
         self.output_layer = self.layers[-1]
 
         output_size = numpy.prod(self.output_layer.output_shape)
-        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(output_size, config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION)
+        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(int(output_size), config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION, learning_rate, fully_connected_randrange)
 
 
     # self.weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]
@@ -34,17 +33,26 @@ class CNN(object):
         print("TODO: FIX IT")
         return np.zeros((1,1))
 
-    def init_layers(self, layers_shapes):
+    def _complete_to_one(self,weights):
+        for i in range(weights.shape[0]):
+            for j in range(weights.shape[1]):
+                x,y = np.random.randint(3,size=2)
+                weights[i][j][x][y]=0
+                weights[i][j][x][y] = 1- np.sum(np.sum(weights[i][j]))
+
+
+    def init_layers(self, layers_shapes, fully_connected_feature_map_dim):
         count, size, _ = layers_shapes[1]
         self.layers = []
         weights = np.random.uniform(self.randrange, -self.randrange, (layers_shapes[0][0], count, 3, 3))
-
+        self._complete_to_one(weights)
         self.layers.append(ConvolutionLayer(layers_shapes[0], 0, False, next_weights=weights))
         self.layers.append(MaxPoolingLayer(layers_shapes[1], 1, False, prev_weights=weights))
         index = 2
         size //= 2
-        while size > 4:
-            weights = np.random.uniform(1, -1, (count, count * 2, 3, 3))
+        while size > fully_connected_feature_map_dim:
+            weights = np.random.uniform(self.randrange, -self.randrange, (count, count * 2, 3, 3))
+            self._complete_to_one(weights)
             self.layers.append(ConvolutionLayer((count, size, size), index, False, next_weights=weights))
             count *= 2
             index += 1
@@ -70,15 +78,16 @@ class CNN(object):
 
     def classify_sample(self, input_values: np.array):
         self._clear_feeded_values()
-        self._feed_forward(input_values)
-        prediction = np.argmax(self.output_layer.feeded_values)
+        flattened_out = self._feed_forward(input_values)
+        self._fully_connected_net.feed_forward(flattened_out)
+        prediction = np.argmax(self._fully_connected_net.output_layer.feeded_values)
         return prediction
 
     def validate_sample(self, input_values: np.array, correct_output: np.array):
         prediction = self.classify_sample(input_values)
         correct = np.argmax(correct_output)
         #print(prediction, correct, f"Certainty: {self.output_layer.feeded_values[prediction]}")
-        return correct == prediction, self.output_layer.feeded_values[prediction]
+        return correct == prediction, self._fully_connected_net.output_layer.feeded_values[prediction]
 
     def _feed_forward(self,input_values):
         values = input_values
