@@ -236,10 +236,10 @@ def validate_set(net, data_sets: List[Tuple[np.array, np.array]]):
             correct += 1
         total += 1
 
-    print("\rFinished classifying")
+    # print("\rFinished classifying")
 
     average_certainty = float(certainty / total)
-    print(f"Average Certainty: {average_certainty}")
+    print(f"\rAverage Certainty: {average_certainty}")
     correction = float(correct / total) * 100.0
     print(f"Correct: {correction}%")
     return correction, average_certainty
