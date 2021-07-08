@@ -6,7 +6,7 @@ from common import ActivationFunction, AdaptiveLearningRateMode
 
 # Neural Network Configuration
 SEED = random.randint(0, 100000000)
-HIDDEN_LAYERS_SIZES = [1000,1000]
+HIDDEN_LAYERS_SIZES = [500,500]
 OUTPUT_LAYER_SIZE = 10
 FULLY_CONNECTED_FEATURE_MAP_DIM = 8
 ACTIVATION_FUNCTION = ActivationFunction.ReLU

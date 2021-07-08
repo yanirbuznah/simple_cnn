@@ -1,4 +1,5 @@
 import csv
+import os
 import pprint
 import random
 import shutil
@@ -71,18 +72,11 @@ def csv_to_data(path, count=-1) -> Tuple[np.array, np.array]:
 
 
 def save_state(path: Path, prefix, state: EpochStateData):
-    return
-    if USE_GPU:
-        print("Run was with GPU. Converting state back to numpy before saving")
-        weights = [cupy.asnumpy(w) for w in state.weights]
-        state = EpochStateData(state.validate_accuracy, state.train_accuracy, state.epoch, weights)
-
     with open(path / f"{prefix}epoch={state.epoch}_train{state.train_accuracy}%_validate{state.validate_accuracy}% .model", 'wb') as f:
         pickle.dump(state, f)
 
 
 def load_state(path: Path, net: CNN):
-    raise NotImplementedError()
     pickle_model_file = glob(f"{path}/*.model")
     if len(pickle_model_file) != 1:
         raise Exception("Expected only one pickle model file to be found")
@@ -91,16 +85,13 @@ def load_state(path: Path, net: CNN):
         state: EpochStateData = pickle.load(f)
         print(f"Loaded state: {state}")
 
-        if USE_GPU:
-            print("Run should be with GPU. Converting state to cupy before loading")
-            weights = [cupy.array(w) for w in state.weights]
-            state.weights = weights
-
-        net.set_weights(state.weights)
+        net.set_weights(state.cnn_weights, state.fc_weights)
 
     seed_file = glob(f"{path}/seed")
     if len(seed_file) != 1:
         raise Exception("Seed file wasn't found")
+
+    seed_file = seed_file[0]
 
     with open(seed_file, 'r') as f:
         seed = int(f.read())
@@ -152,7 +143,7 @@ def shuffle(train_data, train_correct, validate_data, validate_correct):
 
 def save_predictions(path, prediction_list):
     with open(path, 'w') as f:
-        f.writelines([str(p) for p in prediction_list])
+        f.write("\n".join([str(p) for p in prediction_list]))
 
 
 def interrupt_handler(sig, frame):
@@ -245,6 +236,8 @@ def validate_set(net, data_sets: List[Tuple[np.array, np.array]]):
     return correction, average_certainty
 
 
+DEBUG_CSV_TO_DATA_LIMIT = -1  # USE -1 FOR NO LIMIT
+
 
 def main():
     if len(sys.argv) < 3:
@@ -279,20 +272,20 @@ def main():
 
     if test_csv:
         print("Test csv provided")
-        test_data, _ = csv_to_data(test_csv)
+        test_data, _ = csv_to_data(test_csv, DEBUG_CSV_TO_DATA_LIMIT)
 
     if SHOULD_TRAIN:
         output_path.mkdir(exist_ok=True)
         shutil.copy2("config.py", output_path)
         open(output_path / "seed", "w").write(str(SEED))
 
-        validate_data, validate_correct = csv_to_data(validate_csv)
+        validate_data, validate_correct = csv_to_data(validate_csv, DEBUG_CSV_TO_DATA_LIMIT)
 
         signal.signal(signal.SIGINT, interrupt_handler)
 
         print(f"Reading training data from: {train_csv}")
 
-        train_data, train_correct = csv_to_data(train_csv)
+        train_data, train_correct = csv_to_data(train_csv, DEBUG_CSV_TO_DATA_LIMIT)
 
         if SHOULD_SHUFFLE:
             train_data,train_correct,validate_data,validate_correct = shuffle(train_data,train_correct,validate_data,validate_correct)
@@ -319,7 +312,7 @@ def main():
 
             if (TAKE_BEST_FROM_VALIDATE or TAKE_BEST_FROM_TRAIN) and (overall_best_state.validate_accuracy > 45):
                 print("Take best from:", overall_best_state)
-                net.weights = EpochStateData.deep_copy_list_of_np_arrays(overall_best_state.weights)
+                net.set_weights(EpochStateData.deep_copy_list_of_np_arrays(overall_best_state.cnn_weights), EpochStateData.deep_copy_list_of_np_arrays(overall_best_state.fc_weights))
 
 
             if SUBSET_SIZE > 0:
@@ -352,7 +345,6 @@ def main():
 
             if TAKE_BEST_FROM_TRAIN and TAKE_BEST_FROM_VALIDATE:
                 if current_validate_accuracy + current_train_accuracy > overall_best_state.train_accuracy + overall_best_state.validate_accuracy:
-                    #if current_validate_accuracy >= overall_best_state.validate_accuracy and current_train_accuracy + 2.0 > overall_best_state.train_accuracy:
                     overall_best_state = EpochStateData(current_validate_accuracy, current_train_accuracy, epoch, net.weights)
             elif TAKE_BEST_FROM_TRAIN:
                 if current_train_accuracy > overall_best_state.train_accuracy:
@@ -380,7 +372,7 @@ def main():
 
     if test_csv:
         print("Test csv provided. Classifying...")
-        test_data, _ = csv_to_data(test_csv)
+        test_data, _ = csv_to_data(test_csv, DEBUG_CSV_TO_DATA_LIMIT)
 
         prediction_list = []
         for i, data in enumerate(test_data):
@@ -399,14 +391,13 @@ def main():
 
 
         prediction_list = []
-        net.set_weights(overall_best_state.weights)
+        net.set_weights(overall_best_state.cnn_weights, overall_best_state.fc_weights)
         for i, data in enumerate(test_data):
             classification = net.classify_sample(data) + 1
             prediction_list.append(classification)
 
-        print("Saving predicted best_test.txt")
-
-        save_predictions("best_test.txt", prediction_list)
+        print("Saving predicted output.txt")
+        save_predictions(f"{os.path.join(output_path, 'output.txt')}", prediction_list)
 
         print(prediction_list)
         print(output_path)

@@ -8,6 +8,7 @@ import numpy as np
 if config.USE_GPU:
     import cupy as np
 
+
 class NeuralLayer(object):
     def __init__(self, size: int, index: int,with_bias):
         self.index = index
@@ -43,7 +44,7 @@ class NeuralNetwork(object):
         self.output_layer = NeuralLayer(output_layer_size, 1 + len(hidden_layers_sizes), with_bias=False)
         self.randrange = randrange
 
-        self.weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]
+        self._weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]
 
         self.activation_function = activation_function
         self.lr = learning_rate
@@ -95,14 +96,25 @@ class NeuralNetwork(object):
         for layer in self.hidden_layers + [self.output_layer]:
             prev_layer_index = layer.index - 1
             if config.SOFTMAX and layer == self.output_layer:
-                values = self.softmax(np.dot(self.layers[prev_layer_index].feeded_values, self.weights[prev_layer_index]))
+                values = self.softmax(np.dot(self.layers[prev_layer_index].feeded_values, self._weights[prev_layer_index]))
 
             else:
-                values = self.activation_function.f(np.dot(self.layers[prev_layer_index].feeded_values, self.weights[prev_layer_index]))
+                values = self.activation_function.f(np.dot(self.layers[prev_layer_index].feeded_values, self._weights[prev_layer_index]))
             layer.feed(values)
 
+    @property
+    def weights(self):
+        weights = self._weights
+        if config.USE_GPU:
+            weights = [np.asnumpy(w) for w in weights]
+
+        return weights
+
     def set_weights(self, weights):
-        self.weights = weights
+        if config.USE_GPU:
+            weights = [np.array(w) for w in weights]
+
+        self._weights = weights
 
     @timeit
     def _calculate_errors(self, correct_output: np.array):
@@ -111,7 +123,7 @@ class NeuralNetwork(object):
         errors.insert(0, prev_layer_error)
         for layer in self.layers[:-1][::-1]:
             prev_layer_error = errors[0]
-            weighted_error = np.dot(prev_layer_error, self.weights[layer.index].T) * self.activation_function.d(layer.feeded_values)
+            weighted_error = np.dot(prev_layer_error, self._weights[layer.index].T) * self.activation_function.d(layer.feeded_values)
             errors.insert(0, weighted_error)
 
         return errors
@@ -119,7 +131,7 @@ class NeuralNetwork(object):
     @timeit
     def _update_weights(self, errors: List[np.array]):
         for layer in self.layers[:-1][::-1]:
-            self.weights[layer.index] = self.weights[layer.index] + self.lr * np.outer(self.activation_function.f(layer.feeded_values), errors[layer.index + 1])
+            self._weights[layer.index] = self._weights[layer.index] + self.lr * np.outer(self.activation_function.f(layer.feeded_values), errors[layer.index + 1])
 
     def __str__(self):
         return f"Net[layers={','.join([str(layer.size) for layer in self.layers])}_randrange={self.randrange}]"
