@@ -11,7 +11,7 @@ import numpy as np
 
 
 class CNN(object):
-    def __init__(self, first_layers_shapes: Tuple, fully_connected_feature_map_dim, learning_rate=0.001,
+    def __init__(self, first_layers_shapes: Tuple, fully_connected_feature_map_dim, cnn_lr, fc_lr,
                  cnn_randrange=0.05, fully_connected_randrange=0.035):
         self.randrange = cnn_randrange
 
@@ -20,8 +20,8 @@ class CNN(object):
         self.output_layer = self.layers[-1]
 
         output_size = numpy.prod(self.output_layer.output_shape)
-        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(int(output_size), config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION, learning_rate, fully_connected_randrange)
-        self.lr = learning_rate
+        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(int(output_size), config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION, fc_lr, fully_connected_randrange)
+        self._lr = cnn_lr
 
     def init_layers(self, layers_shapes, fully_connected_feature_map_dim):
         count, size, _ = layers_shapes[1]
@@ -94,7 +94,7 @@ class CNN(object):
         for layer in self.layers[:-1][::-1]:
             if type(layer) == MaxPoolingLayer:
                 continue
-            layer.update_weights(errors[layer.index + 1], self.lr)
+            layer.update_weights(errors[layer.index + 1], self._lr)
 
     @property
     def weights(self):
@@ -119,3 +119,12 @@ class CNN(object):
             else:
                 raise
 
+    @property
+    def lr(self):
+        return self._lr, self._fully_connected_net.lr
+
+    def set_lr(self, cnn_lr, fc_lr):
+        if cnn_lr > 0:
+            self._lr = cnn_lr
+        if fc_lr > 0:
+            self._fully_connected_net.lr = fc_lr

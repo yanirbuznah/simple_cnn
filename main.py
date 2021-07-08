@@ -247,7 +247,7 @@ def main():
     train_csv = sys.argv[1]
     validate_csv = sys.argv[2]
     test_csv = sys.argv[3] if len(sys.argv) >= 4 else None
-    current_train_accuracy=0
+    current_train_accuracy = 0
     epoch = 0
 
     print(" ======== Config ==========")
@@ -255,8 +255,8 @@ def main():
     print(" ==========================")
 
     shape = ((3, 32, 32), (16, 32, 32))
-    net = CNN(shape, config.FULLY_CONNECTED_FEATURE_MAP_DIM, LEARNING_RATE, config.CNN_RANDRANGE, config.FULLY_CONNECTED_RANDRANGE)
-    csv_results = [["epoch", "LR", "train_accuracy", "train_certainty", "validate_accuracy", "validate_certainty"]]
+    net = CNN(shape, config.FC_FEATURE_MAP_DIM, config.CNN_LEARNING_RATE, config.FC_LEARNING_RATE, config.CNN_RANDRANGE, config.FC_RANDRANGE)
+    csv_results = [["epoch", "CNN_LR", "FC_LR", "train_accuracy", "train_certainty", "validate_accuracy", "validate_certainty"]]
 
     #    if SEPARATE_VALIDATE:
     #       validate_data_array, validate_correct_array = separate_data(validate_data,validate_correct)
@@ -300,15 +300,27 @@ def main():
                 print("Training interrupt requested. Stopping")
                 break
 
-            if ADAPTIVE_LEARNING_RATE_MODE == AdaptiveLearningRateMode.FORMULA:
-                net.lr = ADAPTIVE_LEARNING_RATE_FORMULA(epoch)
-            elif ADAPTIVE_LEARNING_RATE_MODE == AdaptiveLearningRateMode.PREDEFINED_DICT:
-                net.lr = ADAPTIVE_LEARNING_RATE_DICT.get(epoch, net.lr)
+
+            if FC_ADAPTIVE_LEARNING_RATE_MODE == AdaptiveLearningRateMode.FORMULA:
+                fc_lr = FC_ADAPTIVE_LEARNING_RATE_FORMULA(epoch)
+            elif FC_ADAPTIVE_LEARNING_RATE_MODE == AdaptiveLearningRateMode.PREDEFINED_DICT:
+                fc_lr = FC_ADAPTIVE_LEARNING_RATE_DICT.get(epoch, -1)
             else:
-                raise NotImplementedError("Unknown adaptive learning rate mode")
+                raise NotImplementedError("Unknown FC adaptive learning rate mode")
+
+            if CNN_ADAPTIVE_LEARNING_RATE_MODE == AdaptiveLearningRateMode.FORMULA:
+                cnn_lr = CNN_ADAPTIVE_LEARNING_RATE_FORMULA(epoch)
+            elif FC_ADAPTIVE_LEARNING_RATE_MODE == AdaptiveLearningRateMode.PREDEFINED_DICT:
+                cnn_lr = CNN_ADAPTIVE_LEARNING_RATE_DICT.get(epoch, -1)
+            else:
+                raise NotImplementedError("Unknown CNN adaptive learning rate mode")
+
+            net.set_lr(cnn_lr, fc_lr)
 
             print(f"Epoch {epoch}")
-            print(f"Current LR: {net.lr}")
+            cnn_lr, fc_lr = net.lr
+            print(f"Current CNN LR : {cnn_lr}")
+            print(f"Current FC LR  : {fc_lr}")
 
             if (TAKE_BEST_FROM_VALIDATE or TAKE_BEST_FROM_TRAIN) and (overall_best_state.validate_accuracy > 45):
                 print("Take best from:", overall_best_state)
@@ -341,7 +353,7 @@ def main():
             if test_csv:
                 run_tests(test_data, net, epoch,output_path,current_validate_accuracy, current_train_accuracy)
 
-            csv_results.append([epoch, net.lr, current_train_accuracy, train_certainty, current_validate_accuracy, validate_certainty])
+            csv_results.append([epoch, *net.lr, current_train_accuracy, train_certainty, current_validate_accuracy, validate_certainty])
 
             if TAKE_BEST_FROM_TRAIN and TAKE_BEST_FROM_VALIDATE:
                 if current_validate_accuracy + current_train_accuracy > overall_best_state.train_accuracy + overall_best_state.validate_accuracy:
