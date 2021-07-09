@@ -122,7 +122,7 @@ class NeuralNetwork(object):
             else:
                 f = self.activation_function.f
 
-            values = f(np.dot(self.layers[prev_layer_index].feeded_values, self.weights[prev_layer_index]))
+            values = f(np.dot(self.layers[prev_layer_index].feeded_values, self._weights[prev_layer_index]))
             layer.feed(values)
 
     @property
