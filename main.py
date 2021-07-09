@@ -249,7 +249,7 @@ def validate_set(net, data_sets: List[Tuple[np.array, np.array]]):
     return correction, average_certainty
 
 
-DEBUG_CSV_TO_DATA_LIMIT = 10  # USE -1 FOR NO LIMIT
+DEBUG_CSV_TO_DATA_LIMIT = -1  # USE -1 FOR NO LIMIT
 
 
 def main():
