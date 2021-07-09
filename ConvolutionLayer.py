@@ -1,7 +1,7 @@
 from numba import prange
 from scipy import ndimage
 
-import config
+
 from common import ActivationFunction, timeit
 
 import numpy as np

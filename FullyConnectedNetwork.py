@@ -42,16 +42,32 @@ class NeuralNetwork(object):
         self.input_layer = NeuralLayer(input_layer_size, 0, with_bias=True)
         self.hidden_layers = [NeuralLayer(size, index + 1, with_bias=True) for index, size in enumerate(hidden_layers_sizes)]
         self.output_layer = NeuralLayer(output_layer_size, 1 + len(hidden_layers_sizes), with_bias=False)
-        self.randrange = randrange
-
-        self._weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]
+        self._initial_weights(randrange)
 
         self.activation_function = activation_function
         self.lr = learning_rate
 
+
+
     @property
     def layers(self):
         return [self.input_layer] + self.hidden_layers + [self.output_layer]
+
+    def _initial_weights(self,randrange):
+        if randrange > 0:
+            self._weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]
+            self.randrange = randrange
+        else:
+            self.randrange = "xavier"
+            self._weights = []
+            for i in range(len(self.layers)-1):
+                n = self.layers[i].size
+                std = np.sqrt(2.0/n)
+                numbers = np.random.randn(self.layers[i].size,self.layers[i+1].size)
+                scaled = numbers * std
+                self._weights.append(scaled)
+
+
 
     def _clear_feeded_values(self):
         for layer in self.layers:
