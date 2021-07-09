@@ -61,6 +61,12 @@ class NeuralNetwork(object):
     def softmax(x):
         return np.exp(x)/sum(np.exp(x))
 
+    @staticmethod
+    def softmax_d(x):
+        # Reshape the 1-d softmax to 2-d so that np.dot will do the matrix multiplication
+        s = x.reshape(-1, 1)
+        return np.diagflat(s) - np.dot(s, s.T)
+
     def train_sample(self, input_values: np.array, correct_output: np.array):
         if config.USE_GPU:
             correct_output = np.array(correct_output)
@@ -96,10 +102,11 @@ class NeuralNetwork(object):
         for layer in self.hidden_layers + [self.output_layer]:
             prev_layer_index = layer.index - 1
             if config.SOFTMAX and layer == self.output_layer:
-                values = self.softmax(np.dot(self.layers[prev_layer_index].feeded_values, self._weights[prev_layer_index]))
-
+                f = self.softmax
             else:
-                values = self.activation_function.f(np.dot(self.layers[prev_layer_index].feeded_values, self._weights[prev_layer_index]))
+                f = self.activation_function.f
+
+            values = f(np.dot(self.layers[prev_layer_index].feeded_values, self.weights[prev_layer_index]))
             layer.feed(values)
 
     @property
@@ -122,8 +129,13 @@ class NeuralNetwork(object):
         prev_layer_error = correct_output - self.output_layer.feeded_values
         errors.insert(0, prev_layer_error)
         for layer in self.layers[:-1][::-1]:
+            if config.SOFTMAX and layer == self.output_layer:
+                d = self.softmax_d
+            else:
+                d = self.activation_function.d
+
             prev_layer_error = errors[0]
-            weighted_error = np.dot(prev_layer_error, self._weights[layer.index].T) * self.activation_function.d(layer.feeded_values)
+            weighted_error = np.dot(prev_layer_error, self._weights[layer.index].T) * d(layer.feeded_values)
             errors.insert(0, weighted_error)
 
         return errors
