@@ -251,6 +251,7 @@ def main():
         print("Not enough arguments")
         return
 
+
     train_csv = sys.argv[1]
     validate_csv = sys.argv[2]
     test_csv = sys.argv[3] if len(sys.argv) >= 4 else None

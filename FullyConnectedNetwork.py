@@ -43,14 +43,36 @@ class NeuralNetwork(object):
         self.output_layer = NeuralLayer(output_layer_size, 1 + len(hidden_layers_sizes), with_bias=False)
         self.randrange = randrange
 
-        self.weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]
 
+
+        # TODO: xavier weights
+        # n = 10
+        # # calculate the range for the weights
+        # std = np.sqrt(2.0 / n)
+        # # generate random numbers
+        # numbers = np.random.randn(1000)
+        # # scale to the desired range
+        # scaled = numbers * std
+        self.weights = [np.random.uniform(-randrange, randrange, (y.size, x.size)) for x, y in zip(self.layers[1:], self.layers[:-1])]
+        self._initial_weights()
         self.activation_function = activation_function
         self.lr = learning_rate
 
     @property
     def layers(self):
         return [self.input_layer] + self.hidden_layers + [self.output_layer]
+
+    def _initial_weights(self):
+        self.weights = []
+
+        for i in range(len(self.layers)-1):
+            n = self.layers[i].size
+            std = np.sqrt(2.0/n)
+            numbers = np.random.randn(self.layers[i].size,self.layers[i+1].size)
+            scaled = numbers * std
+            self.weights.append(scaled)
+
+
 
     def _clear_feeded_values(self):
         for layer in self.layers:
