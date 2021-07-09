@@ -26,11 +26,7 @@ import numpy as np
 
 import pickle
 
-from model_to_imgs import plot_feature_maps
-
 SHOULD_STOP = False
-
-SHOULD_PLOT = False
 
 
 def set_seed(value):
@@ -181,10 +177,7 @@ def _chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
-
 def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mini_batch_size=1):
-    samples_for_plot = data_sets[:10]
-
     if shuffle:
         numpy.random.shuffle(data_sets)
 
@@ -214,10 +207,8 @@ def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mi
         #if len(times) > 50:
         #     times = times[1:]
 
-    print("")
-    if SHOULD_PLOT:
-        plot_feature_maps(net, [s[0] for s in samples_for_plot])
 
+    print("")
     sys.stdout.flush()
 
 
@@ -261,11 +252,6 @@ def main():
     train_csv = sys.argv[1]
     validate_csv = sys.argv[2]
     test_csv = sys.argv[3] if len(sys.argv) >= 4 else None
-
-    if "plot" in sys.argv:
-        global SHOULD_PLOT
-        SHOULD_PLOT = True
-
     current_train_accuracy = 0
     epoch = 0
 
