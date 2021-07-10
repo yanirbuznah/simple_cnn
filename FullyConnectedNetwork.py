@@ -1,47 +1,20 @@
 from typing import List
 
-import config
+from config import *
 from common import ActivationFunction, timeit
 
 import numpy as np
 
-if config.USE_GPU:
+if USE_GPU:
     import cupy as np
 
-
-class NeuralLayer(object):
-    def __init__(self, size: int, index: int,with_bias):
-        self.index = index
-        self.bias = with_bias
-        self.size = int(size)
-        if with_bias:
-            self.size += 1
-        #self.clear_feeded_values()
-
-    def feed(self, values: np.array):
-        if config.USE_GPU:
-            values = np.array(values)
-
-        self.feeded_values += values
-        # make sure that the bias still shut -1
-        if self.bias:
-            self.feeded_values[-1] = -1
-
-    def clear_feeded_values(self):
-        self.feeded_values = np.zeros(self.size)
-        # update the bias neuron to -1
-        if self.bias:
-            self.feeded_values[-1] = -1
-
-    def __repr__(self):
-        return self.feeded_values.__repr__()
-
+from NeuralLayer import NeuralLayer
 
 class NeuralNetwork(object):
-    def __init__(self, input_layer_size: int, hidden_layers_sizes: List[int], output_layer_size: int, activation_function:ActivationFunction, learning_rate=0.001, randrange=0.01):
-        self.input_layer = NeuralLayer(input_layer_size, 0, with_bias=True)
-        self.hidden_layers = [NeuralLayer(size, index + 1, with_bias=True) for index, size in enumerate(hidden_layers_sizes)]
-        self.output_layer = NeuralLayer(output_layer_size, 1 + len(hidden_layers_sizes), with_bias=False)
+    def __init__(self, input_layer_size: int, hidden_layers_sizes: List[int], output_layer_size: int, activation_function:ActivationFunction,hidden_layer_dropout:List[float], learning_rate=0.001, randrange=0.01):
+        self.input_layer = NeuralLayer(input_layer_size, 0, with_bias=True,dropout=0)
+        self.hidden_layers = [NeuralLayer(size, index + 1, with_bias=True,dropout=hidden_layer_dropout[index]) for index, size in enumerate(hidden_layers_sizes)]
+        self.output_layer = NeuralLayer(output_layer_size, 1 + len(hidden_layers_sizes), with_bias=False,dropout=0)
         self._initial_weights(randrange)
 
         self.activation_function = activation_function
@@ -84,7 +57,7 @@ class NeuralNetwork(object):
         return np.diagflat(s) - np.dot(s, s.T)
 
     def train_sample(self, input_values: np.array, correct_output: np.array):
-        if config.USE_GPU:
+        if USE_GPU:
             correct_output = np.array(correct_output)
 
         errors = []
@@ -100,14 +73,14 @@ class NeuralNetwork(object):
 
         ret = errors[0]
 
-        if config.USE_GPU:
+        if USE_GPU:
             ret = np.asnumpy(ret)
 
         return ret
 
     @timeit
     def feed_forward(self, input_values: np.array):
-        if config.USE_GPU:
+        if USE_GPU:
             input_values = np.array(input_values)
 
         self._clear_feeded_values()
@@ -117,7 +90,7 @@ class NeuralNetwork(object):
         self.input_layer.feed(input_values)
         for layer in self.hidden_layers + [self.output_layer]:
             prev_layer_index = layer.index - 1
-            if config.SOFTMAX and layer == self.output_layer:
+            if SOFTMAX and layer == self.output_layer:
                 f = self.softmax
             else:
                 f = self.activation_function.f
@@ -128,13 +101,13 @@ class NeuralNetwork(object):
     @property
     def weights(self):
         weights = self._weights
-        if config.USE_GPU:
+        if USE_GPU:
             weights = [np.asnumpy(w) for w in weights]
 
         return weights
 
     def set_weights(self, weights):
-        if config.USE_GPU:
+        if USE_GPU:
             weights = [np.array(w) for w in weights]
 
         self._weights = weights
@@ -142,16 +115,15 @@ class NeuralNetwork(object):
     @timeit
     def _calculate_errors(self, correct_output: np.array):
         errors = []
-        prev_layer_error = correct_output - self.output_layer.feeded_values
+        if SOFTMAX:
+            index = np.argmax(correct_output)
+            prev_layer_error = self.softmax_d(self.output_layer.feeded_values)[index]
+        else:
+            prev_layer_error = correct_output - self.output_layer.feeded_values
         errors.insert(0, prev_layer_error)
         for layer in self.layers[:-1][::-1]:
-            if config.SOFTMAX and layer == self.output_layer:
-                d = self.softmax_d
-            else:
-                d = self.activation_function.d
-
             prev_layer_error = errors[0]
-            weighted_error = np.dot(prev_layer_error, self._weights[layer.index].T) * d(layer.feeded_values)
+            weighted_error = np.dot(prev_layer_error, self._weights[layer.index].T) * self.activation_function.d(layer.feeded_values)
             errors.insert(0, weighted_error)
 
         return errors

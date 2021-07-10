@@ -195,6 +195,7 @@ def train_set(net, data_sets: List[Tuple[np.array, np.array]], shuffle=False, mi
     net.train_sample(data_sets[0][0], data_sets[0][1])
     times = []
     print(f"|{'Training Progress':^20}|{'Average Accuracy':^20}|{'Average MS/Sample':^20}|{'Estimated Left':^20}|")
+    print(f"+{20*'-'}+{20*'-'}+{20*'-'}+{20*'-'}+")
     for sample, expected_results in data_sets[1:]:
         count += 1
         if count % 5 == 0:
@@ -249,7 +250,7 @@ def validate_set(net, data_sets: List[Tuple[np.array, np.array]]):
     return correction, average_certainty
 
 
-DEBUG_CSV_TO_DATA_LIMIT = 10  # USE -1 FOR NO LIMIT
+DEBUG_CSV_TO_DATA_LIMIT = -1  # USE -1 FOR NO LIMIT
 
 
 def main():
@@ -363,7 +364,7 @@ def main():
 
 
             print("======= Train Accuracy =======")
-            current_train_accuracy, train_certainty = validate_set(net, list(zip(train_data, train_correct)))
+            current_train_accuracy, train_certainty = -1,-1 #validate_set(net, list(zip(train_data, train_correct)))
 
             print("======= Validate Accuracy =======")
             current_validate_accuracy, validate_certainty = validate_set(net, list(zip(validate_data, validate_correct)))
