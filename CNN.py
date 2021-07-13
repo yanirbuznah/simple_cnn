@@ -20,7 +20,7 @@ class CNN(object):
         self.output_layer = self.layers[-1]
 
         output_size = numpy.prod(self.output_layer.output_shape)
-        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(int(output_size), config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION, fc_lr, fully_connected_randrange)
+        self._fully_connected_net = FullyConnectedNetwork.NeuralNetwork(int(output_size), config.HIDDEN_LAYERS_SIZES, config.OUTPUT_LAYER_SIZE, config.ACTIVATION_FUNCTION, config.DROP_OUT,fc_lr, fully_connected_randrange)
         self._lr = cnn_lr
 
     def init_layers(self, layers_shapes, fully_connected_feature_map_dim):
