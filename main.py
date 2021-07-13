@@ -104,12 +104,20 @@ def get_subset(train_data, train_correct, count):
 
 
 def apply_noise(train_data, prob):
-    raise NotImplementedError()
     after_noise_data = EpochStateData.deep_copy_list_of_np_arrays(train_data)
     for i in after_noise_data:
-        indices = np.random.choice(np.arange(i.size), replace=False,
-                                   size=int(i.size * prob))
-        i[indices] = 0
+        channel_size = i.size // 3
+        channel_dim = i.shape[1]
+        indices = np.random.choice(np.arange(channel_size), replace=False,
+                                   size=int(channel_size * prob))
+        mask = np.ones(channel_dim * channel_dim)
+        mask[indices] = 0
+
+        # Make the same pixels black in each channel
+        mask = mask.reshape(channel_dim, channel_dim)
+        i[0] *= mask
+        i[1] *= mask
+        i[2] *= mask
     return after_noise_data
 
 
