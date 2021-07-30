@@ -5,7 +5,7 @@ A simple implimention of neural network from scratch, using numpy cupy and panda
 ### Installing
 Download the zip for this repository or use git on the termianl. The terminal command is:
 ```
-git clone https://github.com/yanirbuznah/simple_neural_network.git
+git clone https://github.com/yanirbuznah/simple_cnn.git
 ```
 After cloning the project, run the following command : 
 ```
@@ -21,7 +21,7 @@ and change the following parameters:
 - [pandas](https://pandas.pydata.org/).
 - [numpy](https://numpy.org/).
 - [cupy](https://cupy.dev/) (only if run on gpu).
-
+- [numba](http://numba.pydata.org/).
 ## Configuration file:
 
 - `SEED` = The seed for the random functions, use `random.randint(0, 100000000)` for a random seed (the network will save the seed in a separate file)
@@ -39,14 +39,17 @@ and change the following parameters:
 - `ACTIVATION_FUNCTION` = The activation function the network uses. Can be one of:
   - `ActivationFunction.ReLU`
   - `ActivationFunction.Sigmoid`
-    
 
-- `RANDRANGE` = The initial range of values of the neurons in the network
+
+- `FC_RANDRANGE` = The initial range of values of the fully connected neurons in the network.
+ 
+- `CNN_RANDRANGE`= The initial range of values of the convolutional layers in the network.
   
 
-- `LEARNING_RATE` = The initial learning rate of the network
+- `CNN_LEARNING_RATE` = The initial learning rate of the convolutional network layers.
   
-
+- `FC_LEARNING_RATE` = The initial learning rate of the fc network layers.
+- `EPOCH_START` = The number of the starting epoch (for starting from the same place after crush).
 - `EPOCH_COUNT` = The number of epochs in training mode.
 
 
@@ -59,7 +62,7 @@ and change the following parameters:
 - `MINI_BATCH_SIZE` = Number of runs (forward propagation and backpropagation) until weights are updated.
   
 
-- `ADAPTIVE_LEARNING_RATE_MODE` = The decay parameter to the learning rate. Can be either:
+- `CNN/FC_ADAPTIVE_LEARNING_RATE_MODE` = The decay parameter to the learning rate. Can be either:
   - `AdaptiveLearningRateMode.PREDEFINED_DICT` (Configured by `ADAPTIVE_LEARNING_RATE_DICT`)
   - `AdaptiveLearningRateMode.FORMULA` (Decay function configured by `ADAPTIVE_LEARNING_RATE_FORMULA`)
     
