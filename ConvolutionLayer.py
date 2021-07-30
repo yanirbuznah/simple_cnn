@@ -99,20 +99,5 @@ class ConvolutionLayer(object):
         self._generate_padded_errors(padded_errors, prev_error)
         self._apply_weight_delta(np.array(padded_errors), prev_error, lr, self.next_weights, self.feeded_values)
 
-
-    #TODO: REMOVE
-    def _rotate_180(self, mat: np.array):
-        ret = np.copy(mat)
-        ret[0][0], ret[2][2] = ret[2][2], ret[0][0]
-        ret[0][1], ret[2][1] = ret[2][1], ret[0][1]
-        ret[2][0], ret[0][2] = ret[0][2], ret[2][0]
-        ret[1][0], ret[1][2] = ret[1][2], ret[1][0]
-
-        return ret
-
-    #TODO: REMOVE
-    def _do_convolution(self, input_values, kernel, forward=True):
-        return ndimage.convolve(input_values, kernel, mode="constant", cval=0.0)
-
     def __repr__(self):
         return self.feeded_values.__repr__()

@@ -10,6 +10,7 @@ if USE_GPU:
 
 from NeuralLayer import NeuralLayer
 
+
 class NeuralNetwork(object):
     def __init__(self, input_layer_size: int, hidden_layers_sizes: List[int], output_layer_size: int, activation_function:ActivationFunction,hidden_layer_dropout:List[float], learning_rate=0.001, randrange=0.01):
         self.input_layer = NeuralLayer(input_layer_size, 0, with_bias=True,dropout=0)
@@ -19,8 +20,6 @@ class NeuralNetwork(object):
 
         self.activation_function = activation_function
         self.lr = learning_rate
-
-
 
     @property
     def layers(self):
@@ -39,8 +38,6 @@ class NeuralNetwork(object):
                 numbers = np.random.randn(self.layers[i].size,self.layers[i+1].size)
                 scaled = numbers * std
                 self._weights.append(scaled)
-
-
 
     def _clear_feeded_values(self):
         for layer in self.layers:
@@ -115,11 +112,7 @@ class NeuralNetwork(object):
     @timeit
     def _calculate_errors(self, correct_output: np.array):
         errors = []
-        if SOFTMAX:
-            index = np.argmax(correct_output)
-            prev_layer_error = self.softmax_d(self.output_layer.feeded_values)[index]
-        else:
-            prev_layer_error = correct_output - self.output_layer.feeded_values
+        prev_layer_error = correct_output - self.output_layer.feeded_values
         errors.insert(0, prev_layer_error)
         for layer in self.layers[:-1][::-1]:
             prev_layer_error = errors[0]

@@ -155,23 +155,6 @@ def interrupt_handler(sig, frame):
 
 
 BEST_TEST_RESULT = 0
-# TODO: REMOVE BEFORE SUBMITTING
-def run_tests(test_data, net, epoch,output_path,current_validate_accuracy, current_train_accuracy):
-    global BEST_TEST_RESULT
-    print(f"RUNNING EPOCH {epoch} MODEL ON TEST SET")
-    prediction_list = []
-    for i, data in enumerate(test_data):
-        classification = net.classify_sample(data) + 1
-        prediction_list.append(classification)
-
-    print("TODO: REMOVE ME")
-    import result_compare
-    result = result_compare.check_results(prediction_list)
-    if result > BEST_TEST_RESULT:
-        BEST_TEST_RESULT = result
-        print(f"NEW BEST TEST ON EPOCH {epoch} WITH RESULT {result}%")
-        save_state(output_path, f"best_test_until_epoch_{epoch}_with_{result}_",EpochStateData(current_validate_accuracy, current_train_accuracy,epoch,net.weights))
-
 
 def _chunks(lst, n):
     for i in range(0, len(lst), n):
@@ -254,7 +237,6 @@ def main():
     validate_csv = sys.argv[2]
     test_csv = sys.argv[3] if len(sys.argv) >= 4 else None
     current_train_accuracy = 0
-    epoch = 0
 
     print(" ======== Config ==========")
     pprint.pprint(list([(k, v) for (k, v) in config.__dict__.items() if k.isupper()]))
@@ -301,11 +283,10 @@ def main():
         current_validate_accuracy = 0
         overall_best_state = EpochStateData(0, 0, 0, net.weights)
 
-        for epoch in range(EPOCH_COUNT):
+        for epoch in range(EPOCH_START, EPOCH_COUNT):
             if SHOULD_STOP:
                 print("Training interrupt requested. Stopping")
                 break
-
 
             if FC_ADAPTIVE_LEARNING_RATE_MODE == AdaptiveLearningRateMode.FORMULA:
                 fc_lr = FC_ADAPTIVE_LEARNING_RATE_FORMULA(epoch)
@@ -332,7 +313,6 @@ def main():
                 print("Take best from:", overall_best_state)
                 net.set_weights(EpochStateData.deep_copy_list_of_np_arrays(overall_best_state.cnn_weights), EpochStateData.deep_copy_list_of_np_arrays(overall_best_state.fc_weights))
 
-
             if SUBSET_SIZE > 0:
                 subset_train, subset_correct = get_subset(train_data, train_correct, SUBSET_SIZE)
                 if INPUT_LAYER_NOISE_PROB > 0:
@@ -348,17 +328,11 @@ def main():
                 else:
                     train_set(net, list(zip(train_data, train_correct)), shuffle=True, mini_batch_size=MINI_BATCH_SIZE)
 
-
             print("======= Train Accuracy =======")
-            current_train_accuracy, train_certainty = -1,-1 #validate_set(net, list(zip(train_data, train_correct)))
+            current_train_accuracy, train_certainty = -1,-1
 
             print("======= Validate Accuracy =======")
             current_validate_accuracy, validate_certainty = validate_set(net, list(zip(validate_data, validate_correct)))
-
-            # TODO: REMOVE ME BEFORE SUBMITTING
-            if test_csv:
-                run_tests(test_data, net, epoch,output_path,current_validate_accuracy, current_train_accuracy)
-
             csv_results.append([epoch, *net.lr, current_train_accuracy, train_certainty, current_validate_accuracy, validate_certainty])
 
             if TAKE_BEST_FROM_TRAIN and TAKE_BEST_FROM_VALIDATE:
@@ -397,32 +371,8 @@ def main():
             classification = net.classify_sample(data) + 1
             prediction_list.append(classification)
 
-        print("Saving predicted latest_test.txt")
-        save_predictions("latest_test.txt", prediction_list)
-
-        print(prediction_list)
-        print(output_path)
-        print("TODO: REMOVE ME")
-        print("Testing results...")
-        import result_compare
-        result_compare.check_results(prediction_list)
-
-
-        prediction_list = []
-        net.set_weights(overall_best_state.cnn_weights, overall_best_state.fc_weights)
-        for i, data in enumerate(test_data):
-            classification = net.classify_sample(data) + 1
-            prediction_list.append(classification)
-
         print("Saving predicted output.txt")
         save_predictions(f"{os.path.join(output_path, 'output.txt')}", prediction_list)
-
-        print(prediction_list)
-        print(output_path)
-        print("TODO: REMOVE ME")
-        print("Testing results...")
-        import result_compare
-        result_compare.check_results(prediction_list)
 
 
 if __name__ == '__main__':

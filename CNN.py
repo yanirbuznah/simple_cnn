@@ -77,10 +77,6 @@ class CNN(object):
         values = input_values
         for index in range(0,len(self.layers), 2):
             result = self.layers[index].feed(values)
-            # #TODO: Check if true!
-            # TODO: Probably not true. Last layer must be MaxPooling
-            # if index != len(self.layers)-2:
-            #     values = self.layers[index + 1].feed(result)
             values = self.layers[index + 1].feed(result)
 
         flattened = values.flatten()
